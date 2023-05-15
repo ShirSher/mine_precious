@@ -1,0 +1,13 @@
+terminal codes:
+module load anaconda/3.7.3
+conda activate orraenv
+export OMP_NUM_THREADS=1
+scp mnist_padded_act_full1.pkl eaguest@access.wexac.weizmann.ac.il:/home/labs/ahissarlab/eaguest/
+Delete file - rm -r 
+Delete files that start with XYZ and continue differatently - rm XYZ*
+Copy file - cp -i file_name new_location
+See spacing that cause error in file - cat -v file_name_to_check
+Fix these errors - tr -d '\r' <old_file_name > fixed_file_name     
+Use GPU server - bsub -q gpu-short -app nvidia-gpu -env LSB_CONTAINER_IMAGE=nvcr.io/nvidia/pytorch:19.07-py3 -gpu num=2:j_exclusive=no -o out.%J -e err.%J python3 some_code.py
+Use GPU with memory - bsub -q gpu-short -app nvidia-gpu -env LSB_CONTAINER_IMAGE=nvcr.io/nvidia/pytorch:19.07-py3 -gpu num=2:j_exclusive=no -R "select[mem>4500] rusage[mem=4500]" -o out.%J -e err.%J python3 syclop_classification_gpu.py 2 0.003 500 150 0 0.5 0.2 5 [3,1] [1,2] 512 5 4 0 0
+Use GPU for MINE - bsub -q gpu-short -app nvidia-gpu -env LSB_CONTAINER_IMAGE=nvcr.io/nvidia/pytorch:19.07-py3 -gpu num=4:j_exclusive=no -R "select[mem>8000] rusage[mem=8000]" -o out.%J -e err.%J python3 mine_run.py 2 0.00005 500 400 1 2 combined 3 2 2 512 6 same
