@@ -13,66 +13,63 @@ import FullDriftDataset
 
 from datetime import datetime
 _datestr = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
-# README.md
-# An example of a run:​
 
-# bsub -q gpu-short -app nvidia-gpu -env LSB_CONTAINER_IMAGE=nvcr.io/nvidia/pytorch:19.07-py3 -gpu num=4:j_exclusive=no -R "select[mem>8000] rusage[mem=8000]" -o out.%J -e err.%J python3 \
-# Adam, {lr}, batch_size, 
-# mine_run.py 2 0.0003 500 200 1 2 combined 3 2 2 512 6 same
-# ---
 
-# sys.argv gets 4 values:
-# [1] - the optimizer - one of three (1) - SGD,(2) - Adam, (3) - RMSprop
-# [2] - lr
-# [3] - batch_size
-# [4] - epochs
-# [5] - train true/false 1/0
-# [6] - Net num - 1-3 #set equal 3 Ignore
-# [7] - traject/MNIST/combined - What form of mine to compute # combined Ignore
-# [8] - number_descending_blocks - i.e. how many steps should the fc networks take,
-#                               starting at 2048 nodes and every step divide the size 
-#                                by 2. max number is 7                                
-# [9] - number_repeating_blocks - the number of times to repeat a particular layer
-# [10] - repeating_blockd_size - the size of nodes of the layer to repeat
-# [11] - traject_max_depths
-# [12] - traject_num_layers
-# [13] - same/different minist/trajectory - to use the same image that the 
-#        trajectory ran on as the joint distribution. # Ignore? 
-
-BASE_PATH = '../VRDrift/'
-part_set = set([_dir for _dir in os.listdir(BASE_PATH) if not _dir.startswith(".")])
+data_path = FullDriftDataset.BASE_PATH
+participants_set = set([_dir for _dir in os.listdir(data_path) if not _dir.startswith(".")])
 exclude_set = set(['DL','OL','SM'])
-PART_LIST = list(part_set - exclude_set)
-PART_LIST = [p for p in PART_LIST if 'try' not in p.lower()]
+participants_list = list(participants_set - exclude_set)
+participants_list = [p for p in participants_list if 'try' not in p.lower()]
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # for testing  - rm for train
-# PART_LIST = PART_LIST[3:6]
-print('Testing on participants,',PART_LIST)
+participants_list = participants_list[3:6]
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+print('Testing on participants,',participants_list)
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ^^ aks what are those numbers?
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 300 observations per participant - 3sec
-NSTIMULI = 100
-NOBS = 300 
-print(NSTIMULI * len(PART_LIST),'total observations')
 
-GAZE_COLS = ['norm_pos_x','norm_pos_y']
-HEAD_COLS = ['head rot x','head rot y','head rot z','head_dir_x','head_dir_y','head_dir_z','head_right_x','head_right_y','head_right_z','head_up_x','head_up_y','head_up_z']
-NCHANNELS = len(GAZE_COLS) + len(HEAD_COLS)
+nStimuli = 100
+nobs = 300 
+print(nStimuli * len(participants_list),'total observations')
 
-# selection = {i:np.array(range(0,NSTIMULI)) for i in range(len(PART_LIST))}
+gaze_cols = ['norm_pos_x',
+             'norm_pos_y']
+head_cols = ['head rot x',
+             'head rot y',
+             'head rot z',
+             'head_dir_x',
+             'head_dir_y',
+             'head_dir_z',
+             'head_right_x',
+             'head_right_y',
+             'head_right_z',
+             'head_up_x',
+             'head_up_y',
+             'head_up_z']
+nChannels = len(gaze_cols) + len(head_cols)
 
 
-selection = {participant:np.array(range(0,NSTIMULI)) for participant in PART_LIST}
+selection = {participant:np.array(range(0,nStimuli)) for participant in participants_list}
 for k in selection.keys():
     # shuffle each individually 
     # inplace function. returns None
     shuffle(selection[k])
+
+
 # train set
 # 240 random observations of each participant
-cut1 = int(NSTIMULI * .80)
+cut1 = int(nStimuli * .80)
 train_selection = {k:selection[k][:cut1] for k in selection.keys()}
+
 # validation set
 # 30 random observations of each participant
-cut2 = int(NSTIMULI * .90)
+cut2 = int(nStimuli * .90)
 val_selection = {k:selection[k][cut1:cut2] for k in selection.keys()}
+
 # test set
 # 30 random observations of each participant
 test_selection = {k:selection[k][cut2:] for k in selection.keys()}
@@ -82,73 +79,47 @@ with open('train_selection.pickle', 'wb') as handle:
     # print('saving train selection. n:',len(train_selection))
     pickle.dump(train_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
-
 with open('val_selection.pickle', 'wb') as handle:
     # print('saving val selection. n:',len(val_selection))
     pickle.dump(val_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    
 
 with open('test_selection.pickle','wb') as handle:
     # print('saving test selection. n:',len(test_selection))
     pickle.dump(test_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-# with open(r'train_selection.pickle', 'rb') as handle:
-#     train_selection = pickle.load(handle)
 
-# with open(r'val_selection.pickle', 'rb') as handle:
-#     val_selection = pickle.load(handle)
-
-# with open(r'test_selection.pickle','rb') as handle:
-#     test_selection = pickle.load(handle)
-
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ^^ ?????????????????????????
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # TODO mod input params 
-gamma = 0
-# optimizer = int(sys.argv[1])
-optimizer = 2 # Adam
-# lr = float(sys.argv[2])
-# lr = 0.0003 
-lr = 0.00001
-# batch_size = int(sys.argv[3])
-# arbitrary 
-# on local running out of memory if bs is too large
-batch_size = 16
-# epochs = int(sys.argv[4])
-epochs = 60 # for testing
+# int(sys.argv[i]) ... 
+# TODO mod test (train=False) for net
 # if int(sys.argv[5]) == 1:
 #     train = True
 # else:
 #     train = False
-# TODO mod test (train=False) for net
+gamma = 0
+optimizer = 2 # Adam
+# lr = 0.0003 
+lr = 0.00001
+# arbitrary 
+# on local running out of memory if bs is too large
+batch_size = 16
+epochs = 60 # for testing
 # train = True
 # hard code. only combined makes sense
 net_num = 1
-# traject = str(sys.argv[7])
-# number_descending_blocks = int(sys.argv[8])
-# number_repeating_blocks = int(sys.argv[9])
-# repeating_blockd_size = int(sys.argv[10])
-# traject_max_depth = int(sys.argv[11])
-# traject_max_depth = 128
-# traject_num_layers = int(sys.argv[12])
-# traject_num_layers = 3
-# first_depth = 32
-# dataset_status = str(sys.argv[13])
+
 mine = MINE.MINE(train = True, 
                  batch = batch_size, 
                  lr = lr,
                  gamma = gamma, 
                  optimizer = optimizer,
-                #  traject_max_depth = traject_max_depth, 
-                #  traject_num_layers = traject_num_layers, 
                  traject_stride = [3,1],
                  traject_kernel = 5, 
                  traject_padding = 0,
-                 traject_pooling = [1,2], 
-                #  number_descending_blocks = number_descending_blocks, 
-                #  number_repeating_blocks=number_repeating_blocks,  
-                #  repeating_blockd_size = repeating_blockd_size,
-                #  dataset_status = dataset_status,
-                 traject_input_dim = [NCHANNELS,NOBS])
+                 traject_pooling = [1,2],
+                 traject_input_dim = [nChannels, nobs])
 
 # print(mine.net)
 
@@ -158,6 +129,8 @@ safety = 0
 # CUDA for PyTorch
 CUDA_AVAIL = torch.cuda.is_available()
 _device = 'cuda:3' if CUDA_AVAIL else 'cpu'
+print(_device)
+#_device = 'cpu'
 
 mine.net = mine.net.to(_device)
 print(mine.net)
@@ -237,6 +210,7 @@ for epoch in range(epochs):
 
     val_epoch_results = []
     val_epoch_losses = []
+
 # Validate 
 # versus mine.net.eval() ie the statistical_estimator which inherits from nn
     with torch.no_grad():
@@ -249,7 +223,7 @@ for epoch in range(epochs):
             joint_inp = joint.permute(0,3,1,2).float()
             marg_inp = marginal.permute(0,3,1,2).float()
             
-            traj_inp, joint_inp, marg_inp = traj_inp.to(device), joint_inp.to(device), marg_inp.to(device)
+            traj_inp, joint_inp, marg_inp = traj_inp.to(_device), joint_inp.to(_device), marg_inp.to(_device)
 
             # where is loss recorded, managed
             val_NIM, val_loss = mine.validate_mine((traj_inp,joint_inp,marg_inp))
