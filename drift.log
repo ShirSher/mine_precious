@@ -1,0 +1,147 @@
+shira@LAPTOP-A21KREOG MINGW64 ~/OneDrive/Documents/Projects/precious (master)
+$ C:/Users/shira/anaconda3/python.exe c:/Users/shira/OneDrive/Documents/Projects/precious/DriftMINERun.py
+Testing on participants, ['OA', 'SHS', 'IS']
+300 total observations
+
+Optimizer: Adam
+Learning rate = 1e-05
+Batch size = 16
+statistical_estimator(
+  (conv_layers): ModuleList(
+    (0): Conv1d(14, 32, kernel_size=(5,), stride=(3,))
+    (1): Conv1d(32, 64, kernel_size=(5,), stride=(1,))
+    (2): Conv1d(64, 128, kernel_size=(5,), stride=(1,))
+    (3): Conv1d(128, 256, kernel_size=(5,), stride=(1,))
+    (4): Conv1d(256, 512, kernel_size=(5,), stride=(1,), padding=(2,))
+    (5): Conv1d(512, 512, kernel_size=(5,), stride=(1,), padding=(4,))
+  )
+  (conv_batchNorm): ModuleList(
+    (0): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (4): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (5): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (conv1): Conv2d(3, 16, kernel_size=(5, 5), stride=(5, 5), padding=(2, 2))
+  (conv2): Conv2d(16, 32, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+  (conv3): Conv2d(32, 64, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+  (non_linearity): ELU(alpha=1.0, inplace=True)
+  (fc): ModuleList(
+    (0): Linear(in_features=3072, out_features=1536, bias=True)
+    (1): Linear(in_features=1536, out_features=768, bias=True)
+    (2): Linear(in_features=768, out_features=384, bias=True)
+  )
+  (fc_last): Linear(in_features=384, out_features=1, bias=True)
+)
+Files already downloaded and verified
+len train dataset 240
+C:\Users\shira\anaconda3\lib\site-packages\torch\utils\data\dataloader.py:563: UserWarning: This DataLoader will create 16 worker processes in total. Our suggested max number of worker in current system is 8 (`cpuset` is not taken into account), which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+Files already downloaded and verified
+len val dataset 30
+C:\Users\shira\anaconda3\lib\site-packages\torch\utils\data\dataloader.py:563: UserWarning: This DataLoader will create 16 worker processes in total. Our suggested max number of worker in current system is 8 (`cpuset` is not taken into account), which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+Training epoch 0
+========================
+Testing on participants, ['SHB', 'YM', 'AR']
+300 total observations
+
+Optimizer: Adam
+Learning rate = 1e-05
+Batch size = 16
+statistical_estimator(
+  (conv_layers): ModuleList(
+    (0): Conv1d(14, 32, kernel_size=(5,), stride=(3,))
+    (1): Conv1d(32, 64, kernel_size=(5,), stride=(1,))
+    (2): Conv1d(64, 128, kernel_size=(5,), stride=(1,))
+    (3): Conv1d(128, 256, kernel_size=(5,), stride=(1,))
+    (4): Conv1d(256, 512, kernel_size=(5,), stride=(1,), padding=(2,))
+    (5): Conv1d(512, 512, kernel_size=(5,), stride=(1,), padding=(4,))
+  )
+  (conv_batchNorm): ModuleList(
+    (0): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (4): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (5): BatchNorm1d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (conv1): Conv2d(3, 16, kernel_size=(5, 5), stride=(5, 5), padding=(2, 2))
+  (conv2): Conv2d(16, 32, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+  (conv3): Conv2d(32, 64, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+  (non_linearity): ELU(alpha=1.0, inplace=True)
+  (fc): ModuleList(
+    (0): Linear(in_features=3072, out_features=1536, bias=True)
+    (1): Linear(in_features=1536, out_features=768, bias=True)
+    (2): Linear(in_features=768, out_features=384, bias=True)
+  )
+  (fc_last): Linear(in_features=384, out_features=1, bias=True)
+)
+Files already downloaded and verified
+len train dataset 240
+C:\Users\shira\anaconda3\lib\site-packages\torch\utils\data\dataloader.py:563: UserWarning: This DataLoader will create 16 worker processes in total. Our suggested max number of worker in current system is 8 (`cpuset` is not taken into account), which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+Files already downloaded and verified
+len val dataset 30
+C:\Users\shira\anaconda3\lib\site-packages\torch\utils\data\dataloader.py:563: UserWarning: This DataLoader will create 16 worker processes in total. Our suggested max number of worker in current system is 8 (`cpuset` is not taken into account), which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+Training epoch 0
+========================
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\spawn.py", line 116, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\spawn.py", line 125, in _main
+    prepare(preparation_data)
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\spawn.py", line 236, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\spawn.py", line 287, in _fixup_main_from_path
+    main_content = runpy.run_path(main_path,
+  File "C:\Users\shira\anaconda3\lib\runpy.py", line 289, in run_path
+    return _run_module_code(code, init_globals, run_name,
+  File "C:\Users\shira\anaconda3\lib\runpy.py", line 96, in _run_module_code
+    _run_code(code, mod_globals, init_globals,
+  File "C:\Users\shira\anaconda3\lib\runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "c:\Users\shira\OneDrive\Documents\Projects\precious\DriftMINERun.py", line 201, in <module>
+    for i, sample in enumerate(traj_generator):
+  File "C:\Users\shira\anaconda3\lib\site-packages\torch\utils\data\dataloader.py", line 444, in __iter__
+    return self._get_iterator()
+  File "C:\Users\shira\anaconda3\lib\site-packages\torch\utils\data\dataloader.py", line 390, in _get_iterator
+    return _MultiProcessingDataLoaderIter(self)
+  File "C:\Users\shira\anaconda3\lib\site-packages\torch\utils\data\dataloader.py", line 1077, in __init__
+    w.start()
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\process.py", line 121, in start
+    self._popen = self._Popen(self)
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\context.py", line 224, in _Popen
+    return _default_context.get_context().Process._Popen(process_obj)
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\context.py", line 336, in _Popen
+    return Popen(process_obj)
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\popen_spawn_win32.py", line 45, in __init__
+    prep_data = spawn.get_preparation_data(process_obj._name)
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\spawn.py", line 154, in get_preparation_data
+    _check_not_importing_main()
+  File "C:\Users\shira\anaconda3\lib\multiprocessing\spawn.py", line 134, in _check_not_importing_main
+    raise RuntimeError('''
+RuntimeError:
+        An attempt has been made to start a new process before the
+        current process has finished its bootstrapping phase.
+
+        This probably means that you are not using fork to start your
+        child processes and you have forgotten to use the proper idiom
+        in the main module:
+
+            if __name__ == '__main__':
+                freeze_support()
+                ...
+
+        The "freeze_support()" line can be omitted if the program
+        is not going to be frozen to produce an executable.
+forrtl: error (200): program aborting due to control-C event
+Image              PC                Routine            Line        Source
+libifcoremd.dll    00007FFB63FFDF54  Unknown               Unknown  Unknown
+KERNELBASE.dll     00007FFBE8AD6717  Unknown               Unknown  Unknown
+KERNEL32.DLL       00007FFBE9DB26AD  Unknown               Unknown  Unknown
+ntdll.dll          00007FFBEB2AA9F8  Unknown               Unknown  Unknown
+

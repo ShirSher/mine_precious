@@ -1,23 +1,22 @@
 import torch
 import numpy as np
 import pandas as pd
-# import tensorflow as tf
-import torchvision
+import tensorflow as tf
 import os
 from scipy.interpolate import CubicSpline
 from datetime import datetime
 # choice with/out replacement. shuffle in-place
 from random import shuffle, choice
 
-BASE_PATH = '../VRDrift/'
+BASE_PATH = '/Volumes/Experiment Data/Sasha and Or/'
 
 # list of participants - ignore hidden files/folders (.DS_Store)
 # part_set = set([_dir for _dir in os.listdir(BASE_PATH) if not _dir.startswith(".")])
 # exclude_set = set(['DL','OL','SM'])
 # PART_LIST = list(part_set - exclude_set)
 # PART_LIST = [p for p in PART_LIST if 'try' not in p.lower()]
-# print('Data from',len(PART_LIST),'participants')
 
+print('Data from',len(PART_LIST),'participants')
 # 125 hz
 FREQ = 0.008
 START_DELTA = 0.0 
@@ -51,8 +50,7 @@ def fillfirstna(resampled_df,orig_df):
 # linear interpolation
 def resample_and_interpolate(df,interp_cols, hz=FREQ):
     # 100 sample session ends at 5 minutes (3seconds * 100)/60
-    # mod minute = END_MINUTE + 10 seconds for 100th stimulus which extends into the 6th minute (ie 101 stimulus at 5:02)
-    end = datetime(year=1970,month=1,day=1,minute=END_MINUTE, second= 10)
+    end = datetime(year=1970,month=1,day=1,minute=END_MINUTE,second=0)
     interp_cols = interp_cols.copy()
     # returns empty dataframe indexed at frequency
     NaNresampled_df = df.set_index('timedelta_dt').resample('{hz}S'.format(hz=hz)).interpolate()
@@ -80,8 +78,7 @@ def resample_and_interpolate(df,interp_cols, hz=FREQ):
 
 def load_events(part,NSTIMULI=101):
     events_path = BASE_PATH+part+'/Events.csv'
-    # _events_df = pd.read_csv(events_path,on_bad_lines='warn')
-    _events_df = pd.read_csv(events_path)
+    _events_df = pd.read_csv(events_path,on_bad_lines='warn')
     simset = int(_events_df.columns[1].split('_')[1])
     imgs = np.array([int(_events_df.loc[img][0]) for img in _events_df.index])
     _events = pd.Series([event[0] for event in _events_df.index],name='unity_time')
@@ -101,8 +98,7 @@ def load_binocular(part,events,cols=None):
     _cols = cols if cols else GAZE_COLS.copy()
     _cols.extend(['EyeID','unity_time'])
     _cols = list(set(_cols))
-    # _gaze_df = pd.read_csv(events_path,on_bad_lines='warn',usecols=_cols)
-    _gaze_df = pd.read_csv(events_path,usecols=_cols)
+    _gaze_df = pd.read_csv(events_path,on_bad_lines='warn',usecols=_cols)
     BINgaze_df = _gaze_df[_gaze_df['EyeID']=='Binocular'][_cols]
     BINgaze_df['unity_time'] = BINgaze_df['unity_time'].apply(lambda x: x/1E7)
     # time since the Beginning in unity-time seconds
@@ -125,8 +121,7 @@ def load_head(part,events,cols=None):
     _cols = cols if cols else HEAD_COLS.copy()
     _cols.extend(['Time'])
     _cols = list(set(_cols))
-    # head_df = pd.read_csv(head_path,on_bad_lines='warn',usecols=_cols)
-    head_df = pd.read_csv(head_path,usecols=_cols)
+    head_df = pd.read_csv(head_path,on_bad_lines='warn',usecols=_cols)
     # take intersection of head direction and gaze data?
     head_df['unity_time'] = head_df['Time'].apply(lambda x: x/1E7) 
     head_df['timedelta'] = head_df['unity_time'] - events[0]
@@ -155,28 +150,21 @@ class FullDataset(torch.utils.data.Dataset):
         self.events_dict = None
         self.traj_df = None
 
-        # self.sample_pointer = -1 
+        self.sample_pointer = -1 
 
         # self.ix_list = [(participant,ix) for participant,ix in ix_dict.items()]
         self.ix_list = [(participant,ix) for participant,ix_list in ix_dict.items() for ix in ix_list]
         shuffle(self.ix_list)
         
         
-        self.imgset, self.imgset_labels = [], []
+        self.imgset, self.imgset_labels = None, None
         
         self.build_datasets()
         
     def build_datasets(self):
     
-        # (self.imgset, self.imgset_labels), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
+        (self.imgset, self.imgset_labels), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
 
-        cifar_data = torchvision.datasets.CIFAR100('./cifar100data/',train=True,download=True)
-        for i in range(len(cifar_data)):
-            self.imgset.append(np.array(cifar_data[i][0]))
-            self.imgset_labels.append(cifar_data[i][1])
-
-        self.imgset = np.array(self.imgset)
-        self.imgset_labels = np.expand_dims(np.array(self.imgset_labels),axis=1)
         # build events_df and trajectory_df ; imgset 
         # fullgaze_df, fullhead_df, fullevents_df = [], [], []
         # fullgaze_dict, fullhead_dict, fullevents_dict = {}, {}, {}
@@ -230,14 +218,13 @@ class FullDataset(torch.utils.data.Dataset):
         # else:
         #     ix_list = self.trainIX_list
 
-        # self.sample_pointer += 1
+        self.sample_pointer += 1
         # MOD iloc
         # pointer = self.random_shuffle[self.sample_pointer]
         # pointer = self.ix_list[self.sample_pointer]
         # _participant = self.events_df.loc[pointer,'ParticipantID']
 
-        # part,event_i = self.ix_list[self.sample_pointer]
-        part,event_i = self.ix_list[index]
+        part,event_i = self.ix_list[self.sample_pointer]
         # self.ix_list.pop(0)
 
         # print('Event - ',pointer,'; Participant - ',_participant,'; Simset - ',self.events_df.loc[pointer,'Simset'],'; Label - ',self.events_df.loc[pointer,'ImgID'])

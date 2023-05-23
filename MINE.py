@@ -141,14 +141,16 @@ class MINE():
 # MOD
     def validate_mine(self, batch,ma_rate=0.01):
         # batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2))
-        joint1 = torch.autograd.Variable(batch[0])
-        joint2 = torch.autograd.Variable(batch[1])
-        marginal = torch.autograd.Variable(batch[2]) #the uneven parts of the dataset are the labels 
-        if torch.cuda.is_available():
-            joint1 = joint1.to('cuda', non_blocking=True)
-            joint2 = joint2.to('cuda', non_blocking=True)
-            marginal = marginal.to('cuda', non_blocking=True)
-            self.net = self.net.cuda()
+        joint1, joint2, marginal = batch 
+
+        # joint1 = torch.autograd.Variable(batch[0])
+        # joint2 = torch.autograd.Variable(batch[1])
+        # marginal = torch.autograd.Variable(batch[2]) #the uneven parts of the dataset are the labels 
+        # if torch.cuda.is_available():
+        #     joint1 = joint1.to('cuda', non_blocking=True)
+        #     joint2 = joint2.to('cuda', non_blocking=True)
+        #     marginal = marginal.to('cuda', non_blocking=True)
+        #     self.net = self.net.cuda()
         #joint = torch.autograd.Variable(torch.FloatTensor(joint))
         #marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
         
@@ -175,16 +177,17 @@ class MINE():
 
     def learn_mine(self,batch, ma_rate=0.01):
         # batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2))
-        joint1 = torch.autograd.Variable(batch[0])
+        joint1, joint2, marginal = batch 
+        # joint1 = torch.autograd.Variable(batch[0])
         # mod from [2] to [1]
-        joint2 = torch.autograd.Variable(batch[1])
+        # joint2 = torch.autograd.Variable(batch[1])
         # mod from [4] to [2]
-        marginal = torch.autograd.Variable(batch[2]) #the uneven parts of the dataset are the labels 
-        if torch.cuda.is_available():
-            joint1 = joint1.to('cuda', non_blocking=True)
-            joint2 = joint2.to('cuda', non_blocking=True)
-            marginal = marginal.to('cuda', non_blocking=True)
-            self.net = self.net.cuda()
+        # marginal = torch.autograd.Variable(batch[2]) #the uneven parts of the dataset are the labels 
+        # if torch.cuda.is_available():
+            # joint1 = joint1.to('cuda', non_blocking=True)
+            # joint2 = joint2.to('cuda', non_blocking=True)
+            # marginal = marginal.to('cuda', non_blocking=True)
+            # self.net = self.net.cuda()
         #joint = torch.autograd.Variable(torch.FloatTensor(joint))
         #marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
         

@@ -1,0 +1,9 @@
+# Temporary files #
+###################
+*.swp
+*.swo
+*~
+
+__pycache__/
+cifar100data/
+
