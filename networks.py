@@ -24,6 +24,7 @@ class statistical_estimator(nn.Module):
                  number_repeating_blocks = 3, repeating_blockd_size = 512, non_linearity = 'elu'):
             
         super().__init__()
+        
         '''
         The statistical estimator for the MINE framework, recieve as input
         an image from MNIST dataset and a trajectory from the Syclop.
@@ -31,7 +32,7 @@ class statistical_estimator(nn.Module):
         flexible network that calculates the network dimentions to accomidate changes
         in all veriables.
         The traject runs through Conv1d blocks with batchnorm for its architecture:
-            traject_input_dim - Input dimantions of the data [dimentions, dim_w, dim_h]
+            traject_input_dim       - Input dimantions of the data [dimentions, dim_w, dim_h]
             traject_max_depth       - max depth of conv layers
             traject_num_layers      - number of layers in the conv part
             traject_stride          - stride of conv layers, could be a list 
@@ -203,7 +204,8 @@ class statistical_estimator(nn.Module):
         # MOD
         self.fc_last = nn.Linear(fc[-1].out_features,1)
                 
-    def forward(self,traject,image):
+    def forward(self, traject, image):
+        print("forward")
         if self.p_conv:   
             for idx, conv_layer in enumerate(self.conv_layers):
                 drop = self.conv_drop[idx]
@@ -222,7 +224,11 @@ class statistical_estimator(nn.Module):
         image = self.non_linearity(self.conv2(image))
         image = self.non_linearity(self.conv3(image))
         # MOD
-        image = image.view(image.size(0), -1)
+        print("image.size")
+        print(image.size)
+        print("image.size(0)")
+        print(image.size(0))
+        image = image.contiguous().view(image.size(0), -1)
         # image = image.view(image.size(0), 64*4*4)
         # 1D vector
         x = torch.cat((image,traject),1) 

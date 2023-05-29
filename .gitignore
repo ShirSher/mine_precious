@@ -3,6 +3,7 @@
 *.swp
 *.swo
 *~
+*.pickle
 
 __pycache__/
 cifar100data/
