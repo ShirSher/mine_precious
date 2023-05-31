@@ -12,6 +12,7 @@ import torch.optim as optim
 import torch.autograd as autograd
 import numpy as np
 
+import gc
 import utils
 
    # trajectories over images
@@ -204,6 +205,16 @@ class statistical_estimator(nn.Module):
         self.fc_last = nn.Linear(fc[-1].out_features,1)
 
     def forward(self, traject, image):
+
+        # prints currently alive Tensors and Variables
+        # for obj in gc.get_objects():
+        #     try:
+        #         if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)) :
+        #             if (obj.get_device() < 0):
+        #                 print(type(obj), obj.size())
+        #     except:
+        #         pass
+
         if self.p_conv:
             for idx, conv_layer in enumerate(self.conv_layers):
                 drop = self.conv_drop[idx]
@@ -224,7 +235,7 @@ class statistical_estimator(nn.Module):
         ''' 1D vector '''
         x = torch.cat((image,traject),1)
         if self.fc[0].in_features != x.shape[1]:
-            self.fc.insert(0,nn.Linear(x.shape[1],self.fc[0].in_features))
+            self.fc.insert(0, nn.Linear(x.shape[1], self.fc[0].in_features))
         for idx, des_fc in enumerate(self.fc):
             x = self.non_linearity(des_fc(x))
         x = self.fc_last(x)

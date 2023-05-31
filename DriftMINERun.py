@@ -82,6 +82,8 @@ with open('val_selection.pickle', 'wb') as handle:
 with open('test_selection.pickle','wb') as handle:
     pickle.dump(test_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+if not os.path.exists("net_epchs"):
+        os.makedirs("net_epchs")
 
 ''' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  ^^ ?????????????????????????
@@ -102,7 +104,7 @@ lr = 0.00001
 # arbitrary
 # on local running out of memory if bs is too large
 batch_size = 16
-epochs = 60 # for testing
+epochs = 3 # for testing
 # train = True
 # hard code. only combined makes sense
 net_num = 1
@@ -256,7 +258,7 @@ for epoch in range(epochs):
         if (np.mean(val_epoch_results) >= val_temp) & (np.mean(val_epoch_losses) <= loss_temp):
             val_temp = np.mean(val_epoch_results)
             loss_temp = np.mean(val_epoch_losses)
-            torch.save(mine.net.state_dict(), 'net_epch_{1}_dt_{0}'.format(_datestr,epoch))
+            torch.save(mine.net.state_dict(), 'net_epchs/net_epch_{1}_dt_{0}'.format(_datestr,epoch))
             print('model saved with val MI:',val_temp,', val Loss:',loss_temp)
 
         # where is loss recorded, managed

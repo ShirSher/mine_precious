@@ -138,9 +138,9 @@ class MINE():
         eT = torch.exp(self.net(joint1, marginal))
         NIM = torch.mean(T) - torch.log(torch.mean(eT)) #The neural information measure by the Donskar-Varadhan representation
         return NIM, T, eT
-# MOD
+
     def validate_mine(self, batch, ma_rate=0.01):
-        # batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2))
+        ''' batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2)) '''
         joint1, joint2, marginal = batch
 
         # joint1 = torch.autograd.Variable(batch[0])
@@ -153,6 +153,12 @@ class MINE():
         #     self.net = self.net.cuda()
         #joint = torch.autograd.Variable(torch.FloatTensor(joint))
         #marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
+
+        if torch.cuda.is_available():
+            joint1 = joint1.to(utils.device, non_blocking=True)
+            joint2 = joint2.to(utils.device, non_blocking=True)
+            marginal = marginal.to(utils.device, non_blocking=True)
+            self.net = self.net.to(utils.device)
 
         NIM , T, eT = self.mutual_information(joint1, joint2, marginal)
 
@@ -176,7 +182,7 @@ class MINE():
 
 
     def learn_mine(self, batch, ma_rate=0.01):
-        # batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2))
+        ''' batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2)) '''
         joint1, joint2, marginal = batch
         # joint1 = torch.autograd.Variable(batch[0])
         # mod from [2] to [1]
@@ -190,6 +196,11 @@ class MINE():
             # self.net = self.net.cuda()
         #joint = torch.autograd.Variable(torch.FloatTensor(joint))
         #marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
+
+        joint1 = joint1.to(utils.device, non_blocking=True)
+        joint2 = joint2.to(utils.device, non_blocking=True)
+        marginal = marginal.to(utils.device, non_blocking=True)
+        self.net = self.net.to(utils.device)
 
         NIM , T, eT = self.mutual_information(joint1, joint2, marginal)
 
@@ -211,43 +222,45 @@ class MINE():
             loss = loss.cpu()
         return NIM, loss
 
-    def epoch(self, ix_selection, num_epoch = 1):
-        print("M GONNA CALL IT!!!!")
-        # data is x or y
-        result = list()
-        nan = None
+# ====================================
+#     ^^ Seems tonot be called
+# ====================================
+    # def epoch(self, ix_selection, num_epoch = 1):
+    #     # data is x or y
+    #     result = list()
+    #     nan = None
 
-        dataset = FullDriftDataset.FullDataset(ix_dict=ix_selection)
-        dataloader = torch.utils.data.DataLoader(dataset,  batch_size = self.batch_size, shuffle = True)
-        #bar = pyprind.ProgBar(len(dataloader), monitor = True)
-        temp_results = []
-        for idx, batch in enumerate(dataloader):
-            NIM, loss = self.learn_mine(batch)
-            temp_results.append(NIM.detach())
-            if torch.isnan(temp_results[-1]):
-                print(temp_results[-6:-1])
-                print('Got to NaN in epoch {0} batch {1}'.format(num_epoch,idx))
-                #plt.plot(result)
-                nan = True
-                break
-            #bar.update()
-            result.append(np.mean(temp_results))
-        #result = np.mean(result)
-        return np.mean(result), nan
+    #     dataset = FullDriftDataset.FullDataset(ix_dict=ix_selection)
+    #     dataloader = torch.utils.data.DataLoader(dataset,  batch_size = self.batch_size, shuffle = True)
+    #     #bar = pyprind.ProgBar(len(dataloader), monitor = True)
+    #     temp_results = []
+    #     for idx, batch in enumerate(dataloader):
+    #         NIM, loss = self.learn_mine(batch)
+    #         temp_results.append(NIM.detach())
+    #         if torch.isnan(temp_results[-1]):
+    #             print(temp_results[-6:-1])
+    #             print('Got to NaN in epoch {0} batch {1}'.format(num_epoch,idx))
+    #             #plt.plot(result)
+    #             nan = True
+    #             break
+    #         #bar.update()
+    #         result.append(np.mean(temp_results))
+    #     #result = np.mean(result)
+    #     return np.mean(result), nan
 
-    def train(self,epochs = 1):
-        results = []
-        #bar = pyprind.ProgBar(epochs, monitor = True)
-        for epoch in range(epochs):
-            result, nan = self.epoch(epoch)
-            if nan:
-                break
-            print('  ',result)
-            results.append(result)
-         #   bar.update()
+    # def train(self,epochs = 1):
+    #     results = []
+    #     #bar = pyprind.ProgBar(epochs, monitor = True)
+    #     for epoch in range(epochs):
+    #         result, nan = self.epoch(epoch)
+    #         if nan:
+    #             break
+    #         print('  ',result)
+    #         results.append(result)
+    #      #   bar.update()
 
-        self.results.append(results)
+    #     self.results.append(results)
 
 
-    def ma(a, window_size=100):
-        return [np.mean(a[i:i+window_size]) for i in range(0,len(a)-window_size)]
+    # def ma(a, window_size=100):
+    #     return [np.mean(a[i:i+window_size]) for i in range(0,len(a)-window_size)]
