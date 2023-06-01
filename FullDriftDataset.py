@@ -8,7 +8,7 @@ from scipy.interpolate import CubicSpline
 from datetime import datetime
 # choice with/out replacement. shuffle in-place
 from random import shuffle, choice
-
+import utils
 BASE_PATH = '../VRDrift/'
 
 # list of participants - ignore hidden files/folders (.DS_Store)
@@ -166,6 +166,10 @@ class FullDataset(torch.utils.data.Dataset):
 
         self.build_datasets()
 
+        # self.joint_tens = torch.empty(42000).to(utils.device)
+        # self.marg_tens = torch.empty(42000).to(utils.device)
+        # self.traj_tens = torch.empty(42000).to(utils.device)
+
     def build_datasets(self):
 
         # (self.imgset, self.imgset_labels), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
@@ -213,7 +217,6 @@ class FullDataset(torch.utils.data.Dataset):
         self.events_dict = fullevents_dict
         self.traj_df = fullgaze_df.join(fullhead_df,on=['ParticipantID','timedelta_dt'])
 
-
     def decode_image_from_simset_and_label(self,simset,label):
         return self.imgset[np.where(self.imgset_labels==label)[0][simset-1]]
 
@@ -222,6 +225,43 @@ class FullDataset(torch.utils.data.Dataset):
         return len(self.ix_list)
 
     def __getitem__(self, index):
+        # print("in __getitem__ start")
+        utils.print_all_cpu_tensors
+
+        part, event_i = self.ix_list[index]
+        # self.ix_list.pop(0)
+
+        # print('Event - ',pointer,'; Participant - ',_participant,'; Simset - ',self.events_df.loc[pointer,'Simset'],'; Label - ',self.events_df.loc[pointer,'ImgID'])
+        # joint_img = self.decode_image_from_simset_and_label(simset=self.events_df.loc[pointer,'Simset'],label=self.events_df.loc[pointer,'ImgID'])
+        _simset = self.events_dict[part].iloc[event_i]['Simset']
+        joint_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[event_i]['ImgID'])
+        self.joint_tens = torch.tensor(joint_img).to(utils.device)
+
+        # np.delete is not in-place
+        # marg_part, marg_event = choice(np.delete(self.ix_list,self.sample_pointer))
+        marg_event = choice(np.delete(np.array(range(0,NSTIMULI)),event_i))
+        # marg_img = self.decode_image_from_simset_and_label(simset=self.events_df.loc[marg_pointer,'Simset'],label=self.events_df.loc[marg_pointer,'ImgID'])
+        marg_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[marg_event]['ImgID'])
+
+        self.marg_tens = torch.tensor(marg_img).to(utils.device)
+
+
+        start_event = self.events_dict[part].iloc[event_i]['Offset_dt'] + pd.Timedelta(seconds=0.5)
+        # dataset is prefenceposted
+        end_event = self.events_dict[part].iloc[(event_i + 1)]['Offset_dt']
+        # multi-index: participant.index => timedelta:
+        traj = self.traj_df.loc[part][(self.traj_df.loc[part].index >= start_event) & (self.traj_df.loc[part].index < end_event)][:self.SAMPLE_SIZE]
+        self.traj_tens = torch.tensor(traj.values).to(utils.device)
+
+        return (self.traj_tens, self.joint_tens, self.marg_tens)
+
+
+
+
+
+
+
+
 
         # if self.val:
         #     ix_list = self.valIX_list
@@ -237,28 +277,3 @@ class FullDataset(torch.utils.data.Dataset):
         # _participant = self.events_df.loc[pointer,'ParticipantID']
 
         # part,event_i = self.ix_list[self.sample_pointer]
-        part, event_i = self.ix_list[index]
-        # self.ix_list.pop(0)
-
-        # print('Event - ',pointer,'; Participant - ',_participant,'; Simset - ',self.events_df.loc[pointer,'Simset'],'; Label - ',self.events_df.loc[pointer,'ImgID'])
-        # joint_img = self.decode_image_from_simset_and_label(simset=self.events_df.loc[pointer,'Simset'],label=self.events_df.loc[pointer,'ImgID'])
-        _simset = self.events_dict[part].iloc[event_i]['Simset']
-        joint_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[event_i]['ImgID'])
-        joint_tens = torch.tensor(joint_img)
-        # np.delete is not in-place
-        # marg_part, marg_event = choice(np.delete(self.ix_list,self.sample_pointer))
-        marg_event = choice(np.delete(np.array(range(0,NSTIMULI)),event_i))
-        # marg_img = self.decode_image_from_simset_and_label(simset=self.events_df.loc[marg_pointer,'Simset'],label=self.events_df.loc[marg_pointer,'ImgID'])
-        marg_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[marg_event]['ImgID'])
-
-        marg_tens = torch.tensor(marg_img)
-
-
-        start_event = self.events_dict[part].iloc[event_i]['Offset_dt'] + pd.Timedelta(seconds=0.5)
-        # dataset is prefenceposted
-        end_event = self.events_dict[part].iloc[(event_i + 1)]['Offset_dt']
-        # multi-index: participant.index => timedelta:
-        traj = self.traj_df.loc[part][(self.traj_df.loc[part].index >= start_event) & (self.traj_df.loc[part].index < end_event)][:self.SAMPLE_SIZE]
-        traj_tens = torch.tensor(traj.values)
-
-        return (traj_tens,joint_tens,marg_tens)

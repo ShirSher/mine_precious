@@ -3,17 +3,16 @@ import torch.optim as optim
 import pandas as pd
 import numpy as np
 import MINE
-import sys
 import os
-import logging
 from random import shuffle, choice
 import pickle
 
 import FullDriftDataset
 import utils
 from datetime import datetime
-_datestr = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
 
+
+_datestr = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
 
 data_path = FullDriftDataset.BASE_PATH
 participants_set = set([_dir for _dir in os.listdir(data_path) if not _dir.startswith(".")])
@@ -104,7 +103,7 @@ lr = 0.00001
 # arbitrary
 # on local running out of memory if bs is too large
 batch_size = 16
-epochs = 3 # for testing
+epochs = 60 # for testing
 # train = True
 # hard code. only combined makes sense
 net_num = 1
@@ -136,8 +135,8 @@ dataset = FullDriftDataset.FullDataset(ix_dict=train_selection)
 print('len train dataset',len(dataset))
 # num_workers maybe comment out
 params = {'batch_size': batch_size,
-          'shuffle': False,
-          'num_workers': 16}
+          'shuffle': False}#,
+#          'num_workers': 16}
 traj_generator = torch.utils.data.DataLoader(dataset, **params)
 
 val_dataset = FullDriftDataset.FullDataset(ix_dict=val_selection)
@@ -157,6 +156,9 @@ model_state = None
 val_temp = 0
 loss_temp = np.inf
 dirty_run = False
+
+print("before big loop")
+# utils.print_all_cpu_tensors()
 for epoch in range(epochs):
 
     '''
@@ -169,6 +171,10 @@ for epoch in range(epochs):
     epoch_losses = []
     for i, sample in enumerate(traj_generator):
         trajectory, joint, marginal = sample
+        trajectory = trajectory.to(device)
+        joint = joint.to(device)
+        marginal = marginal.to(device)
+
         if (dirty_run) :
             print('Sample (pre-mut)')
             print('trajectory:', trajectory.shape, type(trajectory))
@@ -191,6 +197,7 @@ for epoch in range(epochs):
             print('Trajectory mounted: ', traj_inp.shape, type(traj_inp))
             print('Joint mounted:      ', joint_inp.shape, type(joint_inp))
             print('Marginal mounted:   ', marg_inp.shape, type(marg_inp))
+
 
         ''' where is loss recorded, managed '''
         NIM, loss = mine.learn_mine((traj_inp, joint_inp, marg_inp))

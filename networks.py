@@ -12,7 +12,6 @@ import torch.optim as optim
 import torch.autograd as autograd
 import numpy as np
 
-import gc
 import utils
 
    # trajectories over images
@@ -206,15 +205,6 @@ class statistical_estimator(nn.Module):
 
     def forward(self, traject, image):
 
-        # prints currently alive Tensors and Variables
-        # for obj in gc.get_objects():
-        #     try:
-        #         if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)) :
-        #             if (obj.get_device() < 0):
-        #                 print(type(obj), obj.size())
-        #     except:
-        #         pass
-
         if self.p_conv:
             for idx, conv_layer in enumerate(self.conv_layers):
                 drop = self.conv_drop[idx]
@@ -225,6 +215,7 @@ class statistical_estimator(nn.Module):
                 #bNorm = self.conv_batchNorm[idx]
                 pool = nn.MaxPool1d(self.pooling_array[idx])
                 traject = pool(self.non_linearity(conv_layer(traject)))
+
         traject = traject.view(traject.size(0), self.fc_first_size)
 
         image = self.non_linearity(self.conv1(image))
@@ -232,10 +223,14 @@ class statistical_estimator(nn.Module):
         image = self.non_linearity(self.conv3(image))
         image = image.contiguous().view(image.size(0), -1)
 
+
         ''' 1D vector '''
         x = torch.cat((image,traject),1)
         if self.fc[0].in_features != x.shape[1]:
-            self.fc.insert(0, nn.Linear(x.shape[1], self.fc[0].in_features))
+            print(nn.Linear(x.shape[1], self.fc[0].in_features))
+            y = nn.Linear(x.shape[1], self.fc[0].in_features).to(torch.device(utils.device), non_blocking=True)
+            self.fc.insert(0, y)
+            
         for idx, des_fc in enumerate(self.fc):
             x = self.non_linearity(des_fc(x))
         x = self.fc_last(x)

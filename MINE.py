@@ -13,26 +13,18 @@ steps to take:
 
 '''
 
-import os
 import numpy as np
 import pandas as pd
-#import pyprind
-import pickle
-
 import matplotlib.pyplot as plt
-
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.autograd as autograd
-import torchvision
 
 import networks
 import utils
-import FullDriftDataset
-
 
 # mod added traject_input_dim and hardcoded to dimenstions ()
 # mod rm "net_num", "traject", "dataset_status"
@@ -127,6 +119,7 @@ class MINE():
 
 
     def mutual_information(self, joint1, joint2, marginal):
+ 
         # TODO Confirm non "traject"
         # if self.traject == 'traject':
         #     obj = torch.cat((joint1,joint2),1)
@@ -182,6 +175,7 @@ class MINE():
 
 
     def learn_mine(self, batch, ma_rate=0.01):
+  
         ''' batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2)) '''
         joint1, joint2, marginal = batch
         # joint1 = torch.autograd.Variable(batch[0])
@@ -196,11 +190,6 @@ class MINE():
             # self.net = self.net.cuda()
         #joint = torch.autograd.Variable(torch.FloatTensor(joint))
         #marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-
-        joint1 = joint1.to(utils.device, non_blocking=True)
-        joint2 = joint2.to(utils.device, non_blocking=True)
-        marginal = marginal.to(utils.device, non_blocking=True)
-        self.net = self.net.to(utils.device)
 
         NIM , T, eT = self.mutual_information(joint1, joint2, marginal)
 
