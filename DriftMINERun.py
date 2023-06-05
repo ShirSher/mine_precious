@@ -14,45 +14,36 @@ from datetime import datetime
 
 _datestr = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
 
-data_path = FullDriftDataset.BASE_PATH
+data_path = FullDriftDataset._base_path
 participants_set = set([_dir for _dir in os.listdir(data_path) if not _dir.startswith(".")])
-exclude_set = set(['DL','OL','SM'])
+exclude_set = set(['DL','OL','SM', 'VT', 'NC', 'OA', 'NH', 'TL'])
 participants_list = list(participants_set - exclude_set)
 participants_list = [p for p in participants_list if 'try' not in p.lower()]
-''' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- for testing  - rm for train.
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '''
-participants_list = participants_list[3:6]
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# for testing  - rm for train.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# participants_list = participants_list[3:6]
 print('Testing on participants,',participants_list)
 
 
-''' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- ^^ aks what are those numbers?
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '''
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ^^ aks what are those numbers?
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-''' 300 observations per participant - 3sec '''
-nStimuli = 100
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 300 observations per participant - 3sec
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+nStimuli = FullDriftDataset._nStimuli
 nobs = 300
 print(nStimuli * len(participants_list),'total observations')
 
-gaze_cols = ['norm_pos_x',
-             'norm_pos_y']
-head_cols = ['head rot x',
-             'head rot y',
-             'head rot z',
-             'head_dir_x',
-             'head_dir_y',
-             'head_dir_z',
-             'head_right_x',
-             'head_right_y',
-             'head_right_z',
-             'head_up_x',
-             'head_up_y',
-             'head_up_z']
+gaze_cols = FullDriftDataset._gaze_cols
+head_cols = FullDriftDataset._head_cols
 nChannels = len(gaze_cols) + len(head_cols)
 
 
-selection = {participant:np.array(range(0,nStimuli)) for participant in participants_list}
+selection = {participant:np.array(range(0, nStimuli)) for participant in participants_list}
 for k in selection.keys():
     ''' shuffle each individually '''
     ''' inplace function. returns None '''
@@ -84,10 +75,11 @@ with open('test_selection.pickle','wb') as handle:
 if not os.path.exists("net_epchs"):
         os.makedirs("net_epchs")
 
-''' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- ^^ ?????????????????????????
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ '''
 '''
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ^^ ?????????????????????????
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 TODO mod input params
 int(sys.argv[i]) ...
 TODO mod test (train=False) for net
@@ -98,7 +90,6 @@ else:
 '''
 gamma = 0
 optimizer = 2 # Adam
-# lr = 0.0003
 lr = 0.00001
 # arbitrary
 # on local running out of memory if bs is too large
@@ -133,10 +124,10 @@ print(mine.net)
 
 dataset = FullDriftDataset.FullDataset(ix_dict=train_selection)
 print('len train dataset',len(dataset))
-# num_workers maybe comment out
-params = {'batch_size': batch_size,
-          'shuffle': False}#,
-#          'num_workers': 16}
+params = {
+            'batch_size': batch_size,
+            'shuffle': False
+        }
 traj_generator = torch.utils.data.DataLoader(dataset, **params)
 
 val_dataset = FullDriftDataset.FullDataset(ix_dict=val_selection)
@@ -157,19 +148,19 @@ val_temp = 0
 loss_temp = np.inf
 dirty_run = False
 
-print("before big loop")
-# utils.print_all_cpu_tensors()
 for epoch in range(epochs):
 
-    '''
-    Train
-    '''
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#    Train
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     print('========================')
     print('Training epoch',epoch)
     print('========================')
     epoch_results = []
     epoch_losses = []
+
     for i, sample in enumerate(traj_generator):
+
         trajectory, joint, marginal = sample
         trajectory = trajectory.to(device)
         joint = joint.to(device)
@@ -228,9 +219,9 @@ for epoch in range(epochs):
     val_epoch_results = []
     val_epoch_losses = []
 
-    '''
-    Validate
-    '''
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#    Validate
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # versus mine.net.eval() ie the statistical_estimator which inherits from nn
     with torch.no_grad():

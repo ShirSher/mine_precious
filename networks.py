@@ -17,7 +17,7 @@ import utils
    # trajectories over images
 class statistical_estimator(nn.Module):
     # MOD traject_input_dim from [9,1000,0]. make it flex to traj size which may vary between samples, participants => [14,300]
-    def __init__(self, traject_input_dim ,p_conv=None, p_fc = None ,
+    def __init__(self, traject_input_dim ,p_conv=None, p_fc = None,
                  traject_max_depth = 128, traject_num_layers = 3, traject_stride = [3,1],
                  traject_kernel = 3, traject_padding = 0,
                  traject_pooling = [1,2],number_descending_blocks=4,
@@ -153,7 +153,6 @@ class statistical_estimator(nn.Module):
             dim.append(dim_w)
             new_padding = 0
 
-        #print(dim)
         self.final_conv_dim = dim_w.astype(int)
         self.fc_first_size = self.final_conv_dim*conv_depth_array[-1]
 
@@ -174,7 +173,6 @@ class statistical_estimator(nn.Module):
             repeating_blockd_size = [repeating_blockd_size]
         ''' Define the networks steps: '''
         ''' mod for 32 x 32 '''
-        # self.conv1 = nn.Conv2d(1, 16, 5, stride = 2, padding = 2)
         self.conv1 = nn.Conv2d(3, 16, 5, stride = 5, padding = 2)
         self.conv2 = nn.Conv2d(16, 32, 5, stride = 2, padding = 2)
         self.conv3 = nn.Conv2d(32, 64, 5, stride = 2, padding = 2)
@@ -212,7 +210,6 @@ class statistical_estimator(nn.Module):
                 traject = pool(self.non_linearity(drop(conv_layer(traject))))
         else:
             for idx, conv_layer in enumerate(self.conv_layers):
-                #bNorm = self.conv_batchNorm[idx]
                 pool = nn.MaxPool1d(self.pooling_array[idx])
                 traject = pool(self.non_linearity(conv_layer(traject)))
 
@@ -223,14 +220,15 @@ class statistical_estimator(nn.Module):
         image = self.non_linearity(self.conv3(image))
         image = image.contiguous().view(image.size(0), -1)
 
-
-        ''' 1D vector '''
+        # ~~~~~~~~~
+        # 1D vector
+        # ~~~~~~~~~
         x = torch.cat((image,traject),1)
         if self.fc[0].in_features != x.shape[1]:
             print(nn.Linear(x.shape[1], self.fc[0].in_features))
             y = nn.Linear(x.shape[1], self.fc[0].in_features).to(torch.device(utils.device), non_blocking=True)
             self.fc.insert(0, y)
-            
+
         for idx, des_fc in enumerate(self.fc):
             x = self.non_linearity(des_fc(x))
         x = self.fc_last(x)

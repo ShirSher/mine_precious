@@ -21,6 +21,11 @@ import pickle
 import sys
 import gc
 
+# ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^
+# ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^
+# WAT?
+# ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^
+# ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^
 sys.path.append('/home/michael/Documents/Scxript/torchsample-master/torchsample/')
 
 #from skimage.transform import rescale, resize, downscale_local_mean, rotate
@@ -30,22 +35,24 @@ sys.path.append('/home/michael/Documents/Scxript/torchsample-master/torchsample/
 
 # CUDA for PyTorch
 device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
-# device = 'cpu'
-def print_all_cpu_tensors():
+device = 'cpu'
+
+def print_all_tensors():
     # prints currently alive Tensors and Variables
     num_tensors = 0
     num_cpu_tensors = 0
+    num_gpu_tensors = 0
     for obj in gc.get_objects():
         try:
             if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)) :
-                # if (obj.get_device() < 0):
-                    # print(type(obj), obj.size(), obj.get_device())
-                    # num_tensors += 1
-                    num_cpu_tensors += (obj.get_device() < 0)
+                print(type(obj), obj.size(), obj.get_device())
+                num_tensors += 1
+                num_cpu_tensors += (obj.get_device() < 0)
+                num_gpu_tensors += (obj.get_device() > -1)
         except:
-            pass 
-    print("num_tensors ", num_tensors, "num_cpu_tensors ", num_cpu_tensors)
-        
+            pass
+    print("#tensors ", num_tensors, "#cpu_tensors ", num_cpu_tensors, "#gpu_tensors ", num_gpu_tensors)
+
 
 cwd = os.getcwd()
 

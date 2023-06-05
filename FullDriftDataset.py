@@ -1,38 +1,42 @@
 import torch
 import numpy as np
 import pandas as pd
-# import tensorflow as tf
 import torchvision
-import os
-from scipy.interpolate import CubicSpline
 from datetime import datetime
-# choice with/out replacement. shuffle in-place
 from random import shuffle, choice
 import utils
-BASE_PATH = '../VRDrift/'
 
-# list of participants - ignore hidden files/folders (.DS_Store)
-# part_set = set([_dir for _dir in os.listdir(BASE_PATH) if not _dir.startswith(".")])
-# exclude_set = set(['DL','OL','SM'])
-# PART_LIST = list(part_set - exclude_set)
-# PART_LIST = [p for p in PART_LIST if 'try' not in p.lower()]
-# print('Data from',len(PART_LIST),'participants')
-
-# 125 hz
+_base_path = '../VRDrift/'
+'''
+    125 hz
+    first 100 stimuli * 3 seconds each
+    timedelta starts with 0 st second 300 is the right edge
+    add one more time bracket for interpolation before trimming
+'''
 FREQ = 0.008
 START_DELTA = 0.0
-# first 100 stimuli * 3 seconds each
-# timedelta starts with 0 st second 300 is the right edge
-# add one more time bracket for interpolation before trimming
 END_DELTA = 300
-NSTIMULI = 100
+_nStimuli = 100
 END_MINUTE = 5
-GAZE_COLS = ['norm_pos_x','norm_pos_y']
-# Guess
-HEAD_COLS = ['head rot x','head rot y','head rot z','head_dir_x','head_dir_y','head_dir_z','head_right_x','head_right_y','head_right_z','head_up_x','head_up_y','head_up_z']
+_gaze_cols = ['norm_pos_x',
+             'norm_pos_y']
+_head_cols = ['head rot x',
+             'head rot y',
+             'head rot z',
+             'head_dir_x',
+             'head_dir_y',
+             'head_dir_z',
+             'head_right_x',
+             'head_right_y',
+             'head_right_z',
+             'head_up_x',
+             'head_up_y',
+             'head_up_z']
+
+_device = utils.device
 
 # given a time-segmented sample, removes the mean from each time series column
-def zero_center(df,return_cols=None):
+def zero_center(df, return_cols=None):
     def zero_center_series(series):
          return series - np.mean(series)
 
@@ -43,13 +47,13 @@ def zero_center(df,return_cols=None):
         norm_df[col] = zero_center_series(df[col])
     return norm_df
 
-def fillfirstna(resampled_df,orig_df):
+def fillfirstna(resampled_df, orig_df):
     if resampled_df.iloc[0].isna().all() and orig_df.iloc[0]['timedelta'] >= START_DELTA:
             resampled_df.iloc[0] = orig_df.iloc[0][resampled_df.columns]
     return resampled_df
 
 # linear interpolation
-def resample_and_interpolate(df,interp_cols, hz=FREQ):
+def resample_and_interpolate(df, interp_cols, hz=FREQ):
     # 100 sample session ends at 5 minutes (3seconds * 100)/60
     # mod minute = END_MINUTE + 10 seconds for 100th stimulus which extends into the 6th minute (ie 101 stimulus at 5:02)
     end = datetime(year=1970,month=1,day=1,minute=END_MINUTE, second= 10)
@@ -78,8 +82,9 @@ def resample_and_interpolate(df,interp_cols, hz=FREQ):
 
     return resampled_df
 
-def load_events(part,NSTIMULI=101):
-    events_path = BASE_PATH+part+'/Events.csv'
+# why 101  ? aldo why not _nStimuli+1?
+def load_events(part, nStimuli=101):
+    events_path = _base_path  +part + '/Events.csv'
     # _events_df = pd.read_csv(events_path,on_bad_lines='warn')
     _events_df = pd.read_csv(events_path)
     simset = int(_events_df.columns[1].split('_')[1])
@@ -93,16 +98,16 @@ def load_events(part,NSTIMULI=101):
     onsets = pd.to_datetime(_onsets,unit='s')
     # load only the first 100
     events_df = pd.DataFrame({'unity_time':events, 'Offset_dt':onsets,'ImgID':imgs,'Simset':[simset for i in range(len(events))], 'ParticipantID':[part for i in range(len(events))]})
-    return events_df.iloc[:NSTIMULI]
+    return events_df.iloc[:nStimuli]
     # return events[:101], onsets[:101], simset, imgs[:101]
 
-def load_binocular(part,events,cols=None):
-    events_path = BASE_PATH+part+'/Gaze data.csv'
-    _cols = cols if cols else GAZE_COLS.copy()
+def load_binocular(part, events, cols=None):
+    events_path = _base_path + part + '/Gaze data.csv'
+    _cols = cols if cols else _gaze_cols.copy()
     _cols.extend(['EyeID','unity_time'])
     _cols = list(set(_cols))
     # _gaze_df = pd.read_csv(events_path,on_bad_lines='warn',usecols=_cols)
-    _gaze_df = pd.read_csv(events_path,usecols=_cols)
+    _gaze_df = pd.read_csv(events_path, usecols=_cols)
     BINgaze_df = _gaze_df[_gaze_df['EyeID']=='Binocular'][_cols]
     BINgaze_df['unity_time'] = BINgaze_df['unity_time'].apply(lambda x: x/1E7)
     # time since the Beginning in unity-time seconds
@@ -121,8 +126,8 @@ def load_binocular(part,events,cols=None):
     return BINgaze_df
 
 def load_head(part,events,cols=None):
-    head_path = BASE_PATH+part+'/position.csv'
-    _cols = cols if cols else HEAD_COLS.copy()
+    head_path = _base_path + part + '/position.csv'
+    _cols = cols if cols else _head_cols.copy()
     _cols.extend(['Time'])
     _cols = list(set(_cols))
     # head_df = pd.read_csv(head_path,on_bad_lines='warn',usecols=_cols)
@@ -139,15 +144,14 @@ def load_head(part,events,cols=None):
 
 class FullDataset(torch.utils.data.Dataset):
 
-    def __init__(self, ix_dict,gaze_cols=GAZE_COLS.copy(),head_cols=HEAD_COLS.copy(),freq=FREQ,path=BASE_PATH,sample_size=END_DELTA ):
+    def __init__(self, ix_dict, gaze_cols=_gaze_cols.copy(), head_cols=_head_cols.copy(), freq=FREQ, path=_base_path, sample_size=END_DELTA ):
 
-        # self.part_list = participantIDs
         self.part_list = list(ix_dict)
         shuffle(self.part_list)
         self.BASE_PATH = path
         self.GAZE_COLS = gaze_cols
         self.HEAD_COLS = head_cols
-        self.FREQ = freq
+        self.freq = freq
         # clip to 300 datapoints for consistent trajectory sizes for batch sizing
         self.SAMPLE_SIZE = sample_size
         # returns onset times for the first 101 events (for bookending the 100th event)
@@ -157,21 +161,15 @@ class FullDataset(torch.utils.data.Dataset):
 
         # self.sample_pointer = -1
 
-        # self.ix_list = [(participant,ix) for participant,ix in ix_dict.items()]
         self.ix_list = [(participant, ix) for participant, ix_list in ix_dict.items() for ix in ix_list]
         shuffle(self.ix_list)
-
 
         self.imgset, self.imgset_labels = [], []
 
         self.build_datasets()
 
-        # self.joint_tens = torch.empty(42000).to(utils.device)
-        # self.marg_tens = torch.empty(42000).to(utils.device)
-        # self.traj_tens = torch.empty(42000).to(utils.device)
 
     def build_datasets(self):
-
         # (self.imgset, self.imgset_labels), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
 
         cifar_data = torchvision.datasets.CIFAR100('./cifar100data/',train=True,download=True)
@@ -189,11 +187,11 @@ class FullDataset(torch.utils.data.Dataset):
         for part in self.part_list:
             # events_series, offset_dt, simset, imgsetIDs_arr = load_events(part)
             events_df = load_events(part)
-            gaze_df = resample_and_interpolate(load_binocular(part=part,events= events_df['unity_time']),interp_cols=self.GAZE_COLS.copy(),hz=self.FREQ)
+            gaze_df = resample_and_interpolate(load_binocular(part=part,events= events_df['unity_time']),interp_cols=self.GAZE_COLS.copy(),hz=self.freq)
             gaze_df['ParticipantID'] = part
             # TODO figure out how/if to incorporate if we want to maintain info re
             # gaze_df['ParticipantID'] = part
-            head_df = resample_and_interpolate(load_head(part=part,events= events_df['unity_time']),interp_cols=self.HEAD_COLS.copy(),hz=self.FREQ)
+            head_df = resample_and_interpolate(load_head(part=part,events= events_df['unity_time']),interp_cols=self.HEAD_COLS.copy(),hz=self.freq)
             head_df['ParticipantID'] = part
             # head_df['ParticipantID'] = part
 
@@ -225,25 +223,15 @@ class FullDataset(torch.utils.data.Dataset):
         return len(self.ix_list)
 
     def __getitem__(self, index):
-        # print("in __getitem__ start")
-        utils.print_all_cpu_tensors
-
         part, event_i = self.ix_list[index]
-        # self.ix_list.pop(0)
-
-        # print('Event - ',pointer,'; Participant - ',_participant,'; Simset - ',self.events_df.loc[pointer,'Simset'],'; Label - ',self.events_df.loc[pointer,'ImgID'])
-        # joint_img = self.decode_image_from_simset_and_label(simset=self.events_df.loc[pointer,'Simset'],label=self.events_df.loc[pointer,'ImgID'])
         _simset = self.events_dict[part].iloc[event_i]['Simset']
         joint_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[event_i]['ImgID'])
-        self.joint_tens = torch.tensor(joint_img).to(utils.device)
+        self.joint_tens = torch.tensor(joint_img).to(_device)
 
         # np.delete is not in-place
-        # marg_part, marg_event = choice(np.delete(self.ix_list,self.sample_pointer))
-        marg_event = choice(np.delete(np.array(range(0,NSTIMULI)),event_i))
-        # marg_img = self.decode_image_from_simset_and_label(simset=self.events_df.loc[marg_pointer,'Simset'],label=self.events_df.loc[marg_pointer,'ImgID'])
+        marg_event = choice(np.delete(np.array(range(0,_nStimuli)),event_i))
         marg_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[marg_event]['ImgID'])
-
-        self.marg_tens = torch.tensor(marg_img).to(utils.device)
+        self.marg_tens = torch.tensor(marg_img).to(_device)
 
 
         start_event = self.events_dict[part].iloc[event_i]['Offset_dt'] + pd.Timedelta(seconds=0.5)
@@ -251,7 +239,7 @@ class FullDataset(torch.utils.data.Dataset):
         end_event = self.events_dict[part].iloc[(event_i + 1)]['Offset_dt']
         # multi-index: participant.index => timedelta:
         traj = self.traj_df.loc[part][(self.traj_df.loc[part].index >= start_event) & (self.traj_df.loc[part].index < end_event)][:self.SAMPLE_SIZE]
-        self.traj_tens = torch.tensor(traj.values).to(utils.device)
+        self.traj_tens = torch.tensor(traj.values).to(_device)
 
         return (self.traj_tens, self.joint_tens, self.marg_tens)
 
