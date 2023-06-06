@@ -35,7 +35,7 @@ sys.path.append('/home/michael/Documents/Scxript/torchsample-master/torchsample/
 
 # CUDA for PyTorch
 device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
-device = 'cpu'
+# device = 'cpu'
 
 def print_all_tensors():
     # prints currently alive Tensors and Variables
