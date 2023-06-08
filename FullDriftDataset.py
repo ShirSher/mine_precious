@@ -33,7 +33,7 @@ _head_cols = ['head rot x',
              'head_up_y',
              'head_up_z']
 
-_device = utils.device
+_device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
 
 # given a time-segmented sample, removes the mean from each time series column
 def zero_center(df, return_cols=None):
@@ -47,10 +47,12 @@ def zero_center(df, return_cols=None):
         norm_df[col] = zero_center_series(df[col])
     return norm_df
 
+
 def fillfirstna(resampled_df, orig_df):
     if resampled_df.iloc[0].isna().all() and orig_df.iloc[0]['timedelta'] >= START_DELTA:
             resampled_df.iloc[0] = orig_df.iloc[0][resampled_df.columns]
     return resampled_df
+
 
 # linear interpolation
 def resample_and_interpolate(df, interp_cols, hz=FREQ):
@@ -82,6 +84,7 @@ def resample_and_interpolate(df, interp_cols, hz=FREQ):
 
     return resampled_df
 
+
 # why 101  ? aldo why not _nStimuli+1?
 def load_events(part, nStimuli=101):
     events_path = _base_path  +part + '/Events.csv'
@@ -100,6 +103,7 @@ def load_events(part, nStimuli=101):
     events_df = pd.DataFrame({'unity_time':events, 'Offset_dt':onsets,'ImgID':imgs,'Simset':[simset for i in range(len(events))], 'ParticipantID':[part for i in range(len(events))]})
     return events_df.iloc[:nStimuli]
     # return events[:101], onsets[:101], simset, imgs[:101]
+
 
 def load_binocular(part, events, cols=None):
     events_path = _base_path + part + '/Gaze data.csv'
@@ -124,6 +128,7 @@ def load_binocular(part, events, cols=None):
 
     BINgaze_df = BINgaze_df.reset_index(drop=True)
     return BINgaze_df
+
 
 def load_head(part,events,cols=None):
     head_path = _base_path + part + '/position.csv'
@@ -215,12 +220,15 @@ class FullDataset(torch.utils.data.Dataset):
         self.events_dict = fullevents_dict
         self.traj_df = fullgaze_df.join(fullhead_df,on=['ParticipantID','timedelta_dt'])
 
+
     def decode_image_from_simset_and_label(self,simset,label):
         return self.imgset[np.where(self.imgset_labels==label)[0][simset-1]]
+
 
     def __len__(self):
         # 'Denotes the total number of samples'
         return len(self.ix_list)
+
 
     def __getitem__(self, index):
         part, event_i = self.ix_list[index]
@@ -243,25 +251,3 @@ class FullDataset(torch.utils.data.Dataset):
 
         return (self.traj_tens, self.joint_tens, self.marg_tens)
 
-
-
-
-
-
-
-
-
-        # if self.val:
-        #     ix_list = self.valIX_list
-        # elif self.test:
-        #     ix_list = self.testIX_list
-        # else:
-        #     ix_list = self.trainIX_list
-
-        # self.sample_pointer += 1
-        # MOD iloc
-        # pointer = self.random_shuffle[self.sample_pointer]
-        # pointer = self.ix_list[self.sample_pointer]
-        # _participant = self.events_df.loc[pointer,'ParticipantID']
-
-        # part,event_i = self.ix_list[self.sample_pointer]

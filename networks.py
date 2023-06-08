@@ -225,8 +225,7 @@ class statistical_estimator(nn.Module):
         # ~~~~~~~~~
         x = torch.cat((image,traject),1)
         if self.fc[0].in_features != x.shape[1]:
-            print(nn.Linear(x.shape[1], self.fc[0].in_features))
-            y = nn.Linear(x.shape[1], self.fc[0].in_features).to(torch.device(utils.device), non_blocking=True)
+            y = nn.Linear(x.shape[1], self.fc[0].in_features).to(torch.device(utils._device), non_blocking=True)
             self.fc.insert(0, y)
 
         for idx, des_fc in enumerate(self.fc):

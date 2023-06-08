@@ -3,14 +3,11 @@
 *.swp
 *.swo
 *~
-*.pickle
-
+*.log
 
 copy_fo_git
-net_epch_*
-results_train
-results_val
 
 __pycache__/
 cifar100data/
+outputs/
 
