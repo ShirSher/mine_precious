@@ -1,3 +1,8 @@
+'''
+
+All bunny ears lines (^^) are Questions and comments asked by SU
+
+'''
 import torch
 import pandas as pd
 import numpy as np
@@ -65,7 +70,7 @@ print(mine.net)
 # ================
 # Data Loader
 # ================
-train_selection, val_selection = utils.get_selection()
+train_selection, val_selection = FullDriftDataset.get_selection()
 params = {
             'batch_size': batch_size,
             'shuffle': False
@@ -95,11 +100,11 @@ for epoch in range(epochs):
     print('Epoch', epoch)
 
     utils.run('Train', mine, train_generator, train_dataset, train_results, train_losses)
- 
+
     # ^^ if nan across all iterations - in what cases? what indeed
     if len(train_results) == 0:
         if safety > 5:
-            # print('Nans for 5 epochs. Halting Training')
+            print('Nans for 5 epochs. Halting Training')
             break
         safety += 1
         mine.restart_network()
@@ -108,7 +113,7 @@ for epoch in range(epochs):
     with torch.no_grad():
 
         utils.run('Validation', mine, val_generator, val_dataset, val_results, val_losses)
-        
+
         # ^^ what exactly do you do?
         if (val_results[-1] >= max_val_result) & (val_losses[-1] <= min_val_loss):
             max_val_result = val_results[-1]
@@ -118,7 +123,11 @@ for epoch in range(epochs):
 
     print('========================\n')
 
+pd.DataFrame(train_results).to_pickle(utils.output_path+'train_results'+_datestr)
 pd.DataFrame(train_results).to_pickle(utils.output_path+'train_results')
+pd.DataFrame(train_losses).to_pickle(utils.output_path+'train_losses'+_datestr)
 pd.DataFrame(train_losses).to_pickle(utils.output_path+'train_losses')
+pd.DataFrame(val_results).to_pickle(utils.output_path+'val_results'+_datestr)
 pd.DataFrame(val_results).to_pickle(utils.output_path+'val_results')
+pd.DataFrame(val_losses).to_pickle(utils.output_path+'val_losses'+_datestr)
 pd.DataFrame(val_losses).to_pickle(utils.output_path+'val_losses')

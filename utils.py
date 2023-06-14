@@ -10,69 +10,23 @@ Created on Wed Jan 22 11:13:16 2020
 import torch
 import numpy as np
 import os
-import pickle
 import gc
-import FullDriftDataset
 from random import shuffle
 
 # CUDA for PyTorch
-_device = FullDriftDataset._device
+_device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
 _batch_size = 16
 
 # creating needed output folders, if needed.
 output_path = 'outputs/'
 if not os.path.exists(output_path):
     os.makedirs(output_path)
+
 # Network description for each epoch
 # including bias and weights for each layer
 epochs_path = 'outputs/net_epochs/'
 if not os.path.exists(epochs_path):
         os.makedirs(epochs_path)
-
-
-def get_selection ():
-    # ================
-    # DATA
-    # ================
-    data_path = FullDriftDataset._base_path
-    participants_set = set([_dir for _dir in os.listdir(data_path) if not _dir.startswith(".")])
-    exclude_set = set(['DL','OL','SM', 'VT', 'NC', 'OA', 'NH', 'TL'])
-    participants_list = list(participants_set - exclude_set)
-    participants_list = [p for p in participants_list if 'try' not in p.lower()]
-    # participants_list = participants_list[:3] # for testing  - rm for train.
-    print('Testing on participants,',participants_list)
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    # ^^ aks what are those numbers?
-    # 300 observations per participant - 3sec
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    nStimuli = FullDriftDataset._nStimuli
-    print(nStimuli * len(participants_list),'total observations')
-
-
-    selection = {participant:np.array(range(0, nStimuli)) for participant in participants_list}
-
-    for k in selection.keys():
-        # shuffle each individually. inplace function. returns None
-        shuffle(selection[k])
-    # train set
-    # 80 random observations of each participant
-    cut = int(nStimuli * .80)
-    train_selection = {k:selection[k][:cut] for k in selection.keys()}
-    # validation set
-    # 10 random observations of each participant
-    val_selection = {k:selection[k][cut:] for k in selection.keys()}
-
-    # once upon a time there was a test selection array. Abandoned, forgotten and unused.
-    # more can be found in git :)
-
-    # save selections for future runs
-    with open(output_path+'train_selection.pickle', 'wb') as handle:
-        pickle.dump(train_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    with open(output_path+'val_selection.pickle', 'wb') as handle:
-        pickle.dump(val_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    return train_selection, val_selection
 
 
 def run (mode, mine, generator, dataset, epoch_results, epoch_losses):
@@ -81,7 +35,7 @@ def run (mode, mine, generator, dataset, epoch_results, epoch_losses):
     print(mode)
     print('~~~~~~~~~~~~~~~')
 
-    prints = True
+    prints = False
     results= []
     losses = []
     for i, sample in enumerate(generator):

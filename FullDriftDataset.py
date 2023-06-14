@@ -1,7 +1,9 @@
 import torch
+import torchvision
 import numpy as np
 import pandas as pd
-import torchvision
+import os
+import pickle
 from datetime import datetime
 from random import shuffle, choice
 import utils
@@ -33,8 +35,57 @@ _head_cols = ['head rot x',
              'head_up_y',
              'head_up_z']
 
-_device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
+_device = utils._device
 
+'''
+    Selection are tables where for each participant
+    there's an array with numbers 1-100 shuffled
+    the numbers represent labels in Cifar100 dataset.
+'''
+def get_selection ():
+    # ================
+    # DATA
+    # ================
+    data_path = _base_path
+    participants_set = set([_dir for _dir in os.listdir(data_path) if not _dir.startswith(".")])
+    exclude_set = set(['DL','OL','SM', 'VT', 'NC', 'OA', 'NH', 'TL'])
+    participants_list = list(participants_set - exclude_set)
+    participants_list = [p for p in participants_list if 'try' not in p.lower()]
+    # participants_list = ['AM'] # for testing  - rm for train.
+    print('Testing on participants,', participants_list)
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ^^ aks what are those numbers?
+    # 300 observations per participant - 3sec
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    print(_nStimuli * len(participants_list),'total observations')
+
+
+    selection = {participant:np.array(range(0, _nStimuli)) for participant in participants_list}
+
+    for k in selection.keys():
+        # shuffle each individually. inplace function. returns None
+        shuffle(selection[k])
+    # train set
+    # 70 random observations of each participant
+    cut = int(_nStimuli * .70)
+    train_selection = {k:selection[k][:cut] for k in selection.keys()}
+    # validation set
+    #  random observations of each participant
+    val_selection = {k:selection[k][cut:] for k in selection.keys()}
+
+    # once upon a time there was a test selection array. Abandoned, forgotten and unused.
+    # more can be found in git :)
+
+    # save selections for future runs
+    with open(utils.output_path+'train_selection.pickle', 'wb') as handle:
+        pickle.dump(train_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    with open(utils.output_path+'val_selection.pickle', 'wb') as handle:
+        pickle.dump(val_selection, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return train_selection, val_selection
+
+# ^^ WHY ARENT ALL THOSE FUNCTIONS INSIDE THE CLASS?
 # given a time-segmented sample, removes the mean from each time series column
 def zero_center(df, return_cols=None):
     def zero_center_series(series):
@@ -48,7 +99,7 @@ def zero_center(df, return_cols=None):
     return norm_df
 
 
-def fillfirstna(resampled_df, orig_df):
+def fill_first_na(resampled_df, orig_df):
     if resampled_df.iloc[0].isna().all() and orig_df.iloc[0]['timedelta'] >= START_DELTA:
             resampled_df.iloc[0] = orig_df.iloc[0][resampled_df.columns]
     return resampled_df
@@ -73,7 +124,7 @@ def resample_and_interpolate(df, interp_cols, hz=FREQ):
     linInterp_df = resampledInterspersed_df[interp_cols].interpolate(method='linear')
     # take only the resampled time rows
     resampled_df = linInterp_df.loc[NaNresampled_df.index]
-    resampled_df = fillfirstna(resampled_df,df)
+    resampled_df = fill_first_na(resampled_df,df)
     # keep right fencepost
     resampled_df = resampled_df[(resampled_df.index <= end)]
 
@@ -84,25 +135,39 @@ def resample_and_interpolate(df, interp_cols, hz=FREQ):
 
     return resampled_df
 
+# ^^
+def conv_alph_to_num(num):
+    if num<2 or num>89:
+        return num
+    units = num%10
+    tens = num//10
+    if (units - tens) == 1:
+        return units
+    temp = tens*10 + tens + 1
+    if (num > temp):
+        temp += 11
+    return num + (10 - temp%10)
 
-# why 101  ? aldo why not _nStimuli+1?
+# ^^ why 101  ? aldo why not _nStimuli+1?
 def load_events(part, nStimuli=101):
-    events_path = _base_path  +part + '/Events.csv'
-    # _events_df = pd.read_csv(events_path,on_bad_lines='warn')
+    events_path = _base_path + part + '/Events.csv'
     _events_df = pd.read_csv(events_path)
     simset = int(_events_df.columns[1].split('_')[1])
+    # ^^ why not use column number instead of _events_df.index for clarity's sake?
     imgs = np.array([int(_events_df.loc[img][0]) for img in _events_df.index])
-    _events = pd.Series([event[0] for event in _events_df.index],name='unity_time')
+    imgs =  [conv_alph_to_num(num) for num in imgs]
+    _events = pd.Series([event[0] for event in _events_df.index], name='unity_time')
     # unity time
     events = _events.apply(lambda x:x/1E7)
     _onsets = events.copy()
     # time from start as datetime
     _onsets -= _onsets[0]
-    onsets = pd.to_datetime(_onsets,unit='s')
+    onsets = pd.to_datetime(_onsets, unit='s')
     # load only the first 100
     events_df = pd.DataFrame({'unity_time':events, 'Offset_dt':onsets,'ImgID':imgs,'Simset':[simset for i in range(len(events))], 'ParticipantID':[part for i in range(len(events))]})
     return events_df.iloc[:nStimuli]
     # return events[:101], onsets[:101], simset, imgs[:101]
+    # ^^ why not all???????
 
 
 def load_binocular(part, events, cols=None):
@@ -138,7 +203,7 @@ def load_head(part,events,cols=None):
     # head_df = pd.read_csv(head_path,on_bad_lines='warn',usecols=_cols)
     head_df = pd.read_csv(head_path,usecols=_cols)
     # take intersection of head direction and gaze data?
-    head_df['unity_time'] = head_df['Time'].apply(lambda x: x/1E7)
+    head_df['unity_time'] = head_df['Time'].apply(lambda x: x/1E7) # ^^ conversion to different time scale 100 nano sec and not milli sec
     head_df['timedelta'] = head_df['unity_time'] - events[0]
     head_df['timedelta_dt'] = pd.to_datetime(head_df['timedelta'],unit='s')
     head_df = head_df[head_df['timedelta'] >= START_DELTA ]
@@ -175,35 +240,30 @@ class FullDataset(torch.utils.data.Dataset):
 
 
     def build_datasets(self):
-        # (self.imgset, self.imgset_labels), (x_test, y_test) = tf.keras.datasets.cifar100.load_data()
-
-        cifar_data = torchvision.datasets.CIFAR100('./cifar100data/',train=True,download=True)
+        cifar_data = torchvision.datasets.CIFAR100('./cifar100data/',train=True,download=True) # !!!!!!!!! ^^ train?
         for i in range(len(cifar_data)):
             self.imgset.append(np.array(cifar_data[i][0]))
             self.imgset_labels.append(cifar_data[i][1])
 
         self.imgset = np.array(self.imgset)
+        # !!!!!!!!! ^^ ??????????????? expand_dims
         self.imgset_labels = np.expand_dims(np.array(self.imgset_labels),axis=1)
         # build events_df and trajectory_df ; imgset
-        # fullgaze_df, fullhead_df, fullevents_df = [], [], []
-        # fullgaze_dict, fullhead_dict, fullevents_dict = {}, {}, {}
         fullgaze_df, fullhead_df, fullevents_dict = [], [], {}
 
         for part in self.part_list:
-            # events_series, offset_dt, simset, imgsetIDs_arr = load_events(part)
             events_df = load_events(part)
             gaze_df = resample_and_interpolate(load_binocular(part=part,events= events_df['unity_time']),interp_cols=self.GAZE_COLS.copy(),hz=self.freq)
             gaze_df['ParticipantID'] = part
             # TODO figure out how/if to incorporate if we want to maintain info re
-            # gaze_df['ParticipantID'] = part
             head_df = resample_and_interpolate(load_head(part=part,events= events_df['unity_time']),interp_cols=self.HEAD_COLS.copy(),hz=self.freq)
             head_df['ParticipantID'] = part
-            # head_df['ParticipantID'] = part
 
             # fullgaze_dict[part] = gaze_df
             # fullhead_dict[part] = head_df
+            # ^^ so why is participants name saved in events_df ??????????
             fullevents_dict[part] = events_df
-
+            # why the missmatch
             fullgaze_df.append(gaze_df)
             fullhead_df.append(head_df)
             # fullevents_df.append(events_df)
@@ -215,14 +275,13 @@ class FullDataset(torch.utils.data.Dataset):
 
         fullhead_df = pd.concat(fullhead_df)
         fullhead_df = fullhead_df.set_index(['ParticipantID','timedelta_dt'])
-        # reindex 0-n
-        # self.events_df = pd.concat(fullevents_df,ignore_index=True)
-        self.events_dict = fullevents_dict
+        # reindex 0-n        self.events_dict = fullevents_dict
         self.traj_df = fullgaze_df.join(fullhead_df,on=['ParticipantID','timedelta_dt'])
 
 
-    def decode_image_from_simset_and_label(self,simset,label):
-        return self.imgset[np.where(self.imgset_labels==label)[0][simset-1]]
+    def decode_image_from_simset_and_label(self, simset, label):
+        loc = np.where(self.imgset_labels==label)[0][simset-1]
+        return self.imgset[loc]
 
 
     def __len__(self):
@@ -231,14 +290,15 @@ class FullDataset(torch.utils.data.Dataset):
 
 
     def __getitem__(self, index):
+        # ^^ where does this become a couple?
         part, event_i = self.ix_list[index]
         _simset = self.events_dict[part].iloc[event_i]['Simset']
-        joint_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[event_i]['ImgID'])
+        joint_img = self.decode_image_from_simset_and_label(simset=_simset, label=self.events_dict[part].iloc[event_i]['ImgID'])
         self.joint_tens = torch.tensor(joint_img).to(_device)
 
         # np.delete is not in-place
         marg_event = choice(np.delete(np.array(range(0,_nStimuli)),event_i))
-        marg_img = self.decode_image_from_simset_and_label(simset=_simset,label=self.events_dict[part].iloc[marg_event]['ImgID'])
+        marg_img = self.decode_image_from_simset_and_label(simset=_simset, label=self.events_dict[part].iloc[marg_event]['ImgID'])
         self.marg_tens = torch.tensor(marg_img).to(_device)
 
 
