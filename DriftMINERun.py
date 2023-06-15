@@ -38,11 +38,11 @@ torch.backends.cudnn.benchmark = True
 # ================
 gamma = 0
 optimizer = 2 # Adam
-lr = 0.00001
+lr = 1e-6
 # arbitrary
 # on local running out of memory if bs is too large
 batch_size = 16
-epochs = 60 # for testing
+epochs = 600 # for testing
 # train = True
 # hard code. only combined makes sense
 net_num = 1

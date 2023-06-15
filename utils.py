@@ -31,9 +31,9 @@ if not os.path.exists(epochs_path):
 
 def run (mode, mine, generator, dataset, epoch_results, epoch_losses):
 
-    print('~~~~~~~~~~~~~~~')
-    print(mode)
-    print('~~~~~~~~~~~~~~~')
+    # print('~~~~~~~~~~~~~~~')
+    # print(mode)
+    # print('~~~~~~~~~~~~~~~')
 
     prints = False
     results= []

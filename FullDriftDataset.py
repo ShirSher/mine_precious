@@ -51,7 +51,7 @@ def get_selection ():
     exclude_set = set(['DL','OL','SM', 'VT', 'NC', 'OA', 'NH', 'TL'])
     participants_list = list(participants_set - exclude_set)
     participants_list = [p for p in participants_list if 'try' not in p.lower()]
-    # participants_list = ['AM'] # for testing  - rm for train.
+    # participants_list = participants_list[:3] # for testing  - rm for train.
     print('Testing on participants,', participants_list)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ^^ aks what are those numbers?
@@ -67,7 +67,7 @@ def get_selection ():
         shuffle(selection[k])
     # train set
     # 70 random observations of each participant
-    cut = int(_nStimuli * .70)
+    cut = int(_nStimuli * .80)
     train_selection = {k:selection[k][:cut] for k in selection.keys()}
     # validation set
     #  random observations of each participant
@@ -135,7 +135,12 @@ def resample_and_interpolate(df, interp_cols, hz=FREQ):
 
     return resampled_df
 
-# ^^
+'''
+    converting from the order Unity loads files:
+    0,1,10,11,...2,20,21,...99
+    to
+    0,1,2,3,...,99 
+'''
 def conv_alph_to_num(num):
     if num<2 or num>89:
         return num
@@ -195,7 +200,7 @@ def load_binocular(part, events, cols=None):
     return BINgaze_df
 
 
-def load_head(part,events,cols=None):
+def load_head(part, events, cols=None):
     head_path = _base_path + part + '/position.csv'
     _cols = cols if cols else _head_cols.copy()
     _cols.extend(['Time'])
@@ -225,12 +230,11 @@ class FullDataset(torch.utils.data.Dataset):
         # clip to 300 datapoints for consistent trajectory sizes for batch sizing
         self.SAMPLE_SIZE = sample_size
         # returns onset times for the first 101 events (for bookending the 100th event)
-        # self.events_df = None
         self.events_dict = None
         self.traj_df = None
 
         # self.sample_pointer = -1
-
+        # Moving ix_list from dictionary (where key = participant's name and value is an array of selected labels) to pairs
         self.ix_list = [(participant, ix) for participant, ix_list in ix_dict.items() for ix in ix_list]
         shuffle(self.ix_list)
 
@@ -246,8 +250,7 @@ class FullDataset(torch.utils.data.Dataset):
             self.imgset_labels.append(cifar_data[i][1])
 
         self.imgset = np.array(self.imgset)
-        # !!!!!!!!! ^^ ??????????????? expand_dims
-        self.imgset_labels = np.expand_dims(np.array(self.imgset_labels),axis=1)
+        self.imgset_labels = np.array(self.imgset_labels)
         # build events_df and trajectory_df ; imgset
         fullgaze_df, fullhead_df, fullevents_dict = [], [], {}
 
@@ -257,6 +260,7 @@ class FullDataset(torch.utils.data.Dataset):
             gaze_df['ParticipantID'] = part
             # TODO figure out how/if to incorporate if we want to maintain info re
             head_df = resample_and_interpolate(load_head(part=part,events= events_df['unity_time']),interp_cols=self.HEAD_COLS.copy(),hz=self.freq)
+            # dublicate code
             head_df['ParticipantID'] = part
 
             # fullgaze_dict[part] = gaze_df
@@ -275,11 +279,15 @@ class FullDataset(torch.utils.data.Dataset):
 
         fullhead_df = pd.concat(fullhead_df)
         fullhead_df = fullhead_df.set_index(['ParticipantID','timedelta_dt'])
-        # reindex 0-n        self.events_dict = fullevents_dict
+        # reindex 0-n        
+        self.events_dict = fullevents_dict
         self.traj_df = fullgaze_df.join(fullhead_df,on=['ParticipantID','timedelta_dt'])
 
 
-    def decode_image_from_simset_and_label(self, simset, label):
+    def decode_image_from_simset_and_label(self, participant, event_i):
+        
+        simset = self.events_dict[participant].iloc[event_i]['Simset']
+        label = self.events_dict[participant].iloc[event_i]['ImgID']
         loc = np.where(self.imgset_labels==label)[0][simset-1]
         return self.imgset[loc]
 
@@ -288,17 +296,17 @@ class FullDataset(torch.utils.data.Dataset):
         # 'Denotes the total number of samples'
         return len(self.ix_list)
 
-
+    # event_i is a row in the participants table holding labels and time stamps
+    # event_i != label
     def __getitem__(self, index):
-        # ^^ where does this become a couple?
-        part, event_i = self.ix_list[index]
-        _simset = self.events_dict[part].iloc[event_i]['Simset']
-        joint_img = self.decode_image_from_simset_and_label(simset=_simset, label=self.events_dict[part].iloc[event_i]['ImgID'])
-        self.joint_tens = torch.tensor(joint_img).to(_device)
 
-        # np.delete is not in-place
-        marg_event = choice(np.delete(np.array(range(0,_nStimuli)),event_i))
-        marg_img = self.decode_image_from_simset_and_label(simset=_simset, label=self.events_dict[part].iloc[marg_event]['ImgID'])
+        part, event_i = self.ix_list[index]
+        joint_img = self.decode_image_from_simset_and_label('joint', part, event_i)
+        self.joint_tens = torch.tensor(joint_img).to(_device)
+        
+        # Picking a randome image from the current's mode (train/val) set 
+        marg_part, marg_eventi = choice(self.ix_list)
+        marg_img = self.decode_image_from_simset_and_label('marg', marg_part, marg_eventi)
         self.marg_tens = torch.tensor(marg_img).to(_device)
 
 
