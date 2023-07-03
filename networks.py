@@ -199,7 +199,7 @@ class statistical_estimator(nn.Module):
         self.fc = nn.ModuleList(fc)
         #self.fc12 = nn.Linear(1024,256)
         # MOD
-        self.fc_last = nn.Linear(fc[-1].out_features,1)
+        self.fc_last = nn.Linear(fc[-1].out_features, 1)
 
     def forward(self, traject, image):
 
@@ -223,7 +223,12 @@ class statistical_estimator(nn.Module):
         # ~~~~~~~~~
         # 1D vector
         # ~~~~~~~~~
-        x = torch.cat((image,traject),1)
+        # how many comes from each input?
+        # ^^  
+        # image.shape = [512, 256] => 131K
+        # traject.shape = [512, 2048] => 1M
+        # x.shape = [512, 2304] => 1.180M
+        x = torch.cat((image,traject), 1)
         if self.fc[0].in_features != x.shape[1]:
             y = nn.Linear(x.shape[1], self.fc[0].in_features).to(torch.device(utils._device), non_blocking=True)
             self.fc.insert(0, y)

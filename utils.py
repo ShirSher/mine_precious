@@ -102,3 +102,4 @@ def conv1d_block_calculator(input_w, input_h = None, kernel = 5, stride = 0, pad
         dim_w /=pooling
         dim_h /=pooling
     return np.floor(dim_w), np.floor(dim_h)
+

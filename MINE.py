@@ -119,23 +119,32 @@ class MINE():
     def mutual_information(self, joint1, joint2, marginal):
 
         T = self.net(joint1, joint2)
-        eT = torch.exp(self.net(joint1, marginal))
+        T2 = self.net(joint1, marginal)
+        eT = torch.exp(T2)
         # The neural information measure by the Donskar-Varadhan representation
-        NIM = torch.mean(T) - torch.log(torch.mean(eT))
+        mean_t = torch.mean(T)
+        mean_et = torch.mean(eT)
+        log_mean_et = torch.log(mean_et)
+        NIM = mean_t - log_mean_et
         return NIM, T, eT
 
 
     def run(self, mode, batch, ma_rate=0.01):
 
         # batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2))
+        # traj  img1    rand_img
         joint1, joint2, marginal = batch
 
         NIM , T, eT = self.mutual_information(joint1, joint2, marginal)
 
         #Using exponantial moving average to correct bias
-        ma_eT = (1-ma_rate)*eT + (ma_rate)*torch.mean(eT)
+        mean_et = torch.mean(eT)
+        ma_eT = (1-ma_rate)*eT + (ma_rate)*mean_et
         # unbiasing
-        loss = -(torch.mean(T) - (1/ma_eT.mean()).detach()*torch.mean(eT))
+        mean_t = torch.mean(T)
+        b = 1/ma_eT.mean()
+        a = (b).detach()
+        loss = -(mean_t - a*mean_et)
         # use biased estimator
 
         if (mode == 'Train'):

@@ -66,11 +66,11 @@ def get_selection ():
         # shuffle each individually. inplace function. returns None
         shuffle(selection[k])
     # train set
-    # 70 random observations of each participant
-    cut = int(_nStimuli * .80)
+    # 80 random observations of each participant
+    cut = int(_nStimuli * .50)
     train_selection = {k:selection[k][:cut] for k in selection.keys()}
     # validation set
-    #  random observations of each participant
+    # 20 random observations of each participant
     val_selection = {k:selection[k][cut:] for k in selection.keys()}
 
     # once upon a time there was a test selection array. Abandoned, forgotten and unused.
@@ -301,12 +301,12 @@ class FullDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
 
         part, event_i = self.ix_list[index]
-        joint_img = self.decode_image_from_simset_and_label('joint', part, event_i)
+        joint_img = self.decode_image_from_simset_and_label(part, event_i)
         self.joint_tens = torch.tensor(joint_img).to(_device)
         
         # Picking a randome image from the current's mode (train/val) set 
         marg_part, marg_eventi = choice(self.ix_list)
-        marg_img = self.decode_image_from_simset_and_label('marg', marg_part, marg_eventi)
+        marg_img = self.decode_image_from_simset_and_label(marg_part, marg_eventi)
         self.marg_tens = torch.tensor(marg_img).to(_device)
 
 
