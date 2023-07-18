@@ -118,33 +118,25 @@ class MINE():
 
     def mutual_information(self, joint1, joint2, marginal):
 
-        T = self.net(joint1, joint2)
-        T2 = self.net(joint1, marginal)
-        eT = torch.exp(T2)
+        t = self.net(joint1, joint2)
+        et = torch.exp(self.net(joint1, marginal))
         # The neural information measure by the Donskar-Varadhan representation
-        mean_t = torch.mean(T)
-        mean_et = torch.mean(eT)
-        log_mean_et = torch.log(mean_et)
-        NIM = mean_t - log_mean_et
-        return NIM, T, eT
+        ni_measure = torch.mean(t) - torch.log(torch.mean(et))
+        return ni_measure, t, et
 
 
-    def run(self, mode, batch, ma_rate=0.01):
+    def run(self, mode, batch, ma_et, ma_rate=0.01):
 
         # batch is a tuple of (joint1, joint2, marginal (from the dataset of joint 2))
         # traj  img1    rand_img
         joint1, joint2, marginal = batch
 
-        NIM , T, eT = self.mutual_information(joint1, joint2, marginal)
+        ni_measure , t, et = self.mutual_information(joint1, joint2, marginal)
 
         #Using exponantial moving average to correct bias
-        mean_et = torch.mean(eT)
-        ma_eT = (1-ma_rate)*eT + (ma_rate)*mean_et
+        ma_et = (1-ma_rate)*ma_et + (ma_rate)*torch.mean(et)
         # unbiasing
-        mean_t = torch.mean(T)
-        b = 1/ma_eT.mean()
-        a = (b).detach()
-        loss = -(mean_t - a*mean_et)
+        loss = -(torch.mean(t) - (1/ma_et.mean()).detach()*torch.mean(et))
         # use biased estimator
 
         if (mode == 'Train'):
@@ -154,6 +146,6 @@ class MINE():
 
         # if cuda, why put it on the cpu?
         if torch.cuda.is_available():
-            NIM = NIM.cpu()
+            ni_measure = ni_measure.cpu()
             loss = loss.cpu()
-        return NIM, loss
+        return ni_measure, loss, ma_et

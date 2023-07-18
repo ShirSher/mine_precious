@@ -13,6 +13,9 @@ import os
 import gc
 from random import shuffle
 
+# _nobs = 300
+_nobs = 32
+
 # CUDA for PyTorch
 _device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
 _batch_size = 16
@@ -38,6 +41,8 @@ def run (mode, mine, generator, dataset, epoch_results, epoch_losses):
     prints = False
     results= []
     losses = []
+    ma_et = 1
+
     for i, sample in enumerate(generator):
 
         trajectory, joint, marginal = sample
@@ -58,7 +63,7 @@ def run (mode, mine, generator, dataset, epoch_results, epoch_losses):
 
 
         # where is loss recorded, managed
-        NIM, loss = mine.run(mode, (traj_inp, joint_inp, marg_inp))
+        NIM, loss, ma_et = mine.run(mode, (traj_inp, joint_inp, marg_inp), ma_et)
         if (prints) :
             print('MI',NIM.detach())
             print('loss',loss.detach())

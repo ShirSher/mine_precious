@@ -7,6 +7,8 @@ import pickle
 from datetime import datetime
 from random import shuffle, choice
 import utils
+import numpy as np
+from scipy.fft import fft2, fftshift
 
 _base_path = '../VRDrift/'
 '''
@@ -17,23 +19,53 @@ _base_path = '../VRDrift/'
 '''
 FREQ = 0.008
 START_DELTA = 0.0
-END_DELTA = 300
+END_DELTA = utils._nobs # 300
 _nStimuli = 100
 END_MINUTE = 5
-_gaze_cols = ['norm_pos_x',
-             'norm_pos_y']
-_head_cols = ['head rot x',
-             'head rot y',
-             'head rot z',
-             'head_dir_x',
-             'head_dir_y',
-             'head_dir_z',
-             'head_right_x',
-             'head_right_y',
-             'head_right_z',
-             'head_up_x',
-             'head_up_y',
-             'head_up_z']
+
+_gaze_cols = []
+_head_cols = []
+mode = 'sasha'
+# mode = 'regular'
+# mode = 'toThePlottings'
+
+if mode == 'toThePlottings':
+    _gaze_cols = ['norm_pos_x',
+                'norm_pos_y', # point
+                'confidence',
+                'GazeNormal1_x', 
+                'GazeNormal1_y',
+                'GazeNormal1_z', #normal
+                'GazeNormal0_x',
+                'GazeNormal0_y',
+                'GazeNormal0_z',
+                'TimeSinceStart',
+                'GazeDirection_x', # degrees
+                'GazeDirection_y']
+    _head_cols = ['head rot x',
+                'head rot y',
+                'head rot z',
+                'head_dir_x',
+                'head_dir_y',
+                'head_dir_z',
+                'head_right_x',
+                'head_right_y',
+                'head_right_z',
+                'head_up_x',
+                'head_up_y',
+                'head_up_z'] # OFF WITH THEIR HEADS!
+else: # 'regular'
+    _gaze_cols = ['norm_pos_x',
+                  'norm_pos_y', # point
+                  'GazeDirection_x', # degrees
+                  'GazeDirection_y']
+    _head_cols = ['head rot x',
+                  'head rot y',
+                  'head rot z']
+
+print(_gaze_cols)
+print(_head_cols)
+nChannels = len(_gaze_cols) + len(_head_cols) if not (mode == 'sasha') else 4
 
 _device = utils._device
 
@@ -51,14 +83,13 @@ def get_selection ():
     exclude_set = set(['DL','OL','SM', 'VT', 'NC', 'OA', 'NH', 'TL'])
     participants_list = list(participants_set - exclude_set)
     participants_list = [p for p in participants_list if 'try' not in p.lower()]
-    # participants_list = participants_list[:3] # for testing  - rm for train.
+    # participants_list = participants_list[:2] # for testing  - rm for train.
     print('Testing on participants,', participants_list)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ^^ aks what are those numbers?
     # 300 observations per participant - 3sec
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     print(_nStimuli * len(participants_list),'total observations')
-
 
     selection = {participant:np.array(range(0, _nStimuli)) for participant in participants_list}
 
@@ -67,7 +98,7 @@ def get_selection ():
         shuffle(selection[k])
     # train set
     # 80 random observations of each participant
-    cut = int(_nStimuli * .50)
+    cut = int(_nStimuli * .80)
     train_selection = {k:selection[k][:cut] for k in selection.keys()}
     # validation set
     # 20 random observations of each participant
@@ -157,10 +188,12 @@ def conv_alph_to_num(num):
 def load_events(part, nStimuli=101):
     events_path = _base_path + part + '/Events.csv'
     _events_df = pd.read_csv(events_path)
+
     simset = int(_events_df.columns[1].split('_')[1])
     # ^^ why not use column number instead of _events_df.index for clarity's sake?
     imgs = np.array([int(_events_df.loc[img][0]) for img in _events_df.index])
     imgs =  [conv_alph_to_num(num) for num in imgs]
+    
     _events = pd.Series([event[0] for event in _events_df.index], name='unity_time')
     # unity time
     events = _events.apply(lambda x:x/1E7)
@@ -178,7 +211,8 @@ def load_events(part, nStimuli=101):
 def load_binocular(part, events, cols=None):
     events_path = _base_path + part + '/Gaze data.csv'
     _cols = cols if cols else _gaze_cols.copy()
-    _cols.extend(['EyeID','unity_time'])
+    # TODO add confidance for filtering
+    _cols.extend(['EyeID','unity_time']) # , 'confidence'
     _cols = list(set(_cols))
     # _gaze_df = pd.read_csv(events_path,on_bad_lines='warn',usecols=_cols)
     _gaze_df = pd.read_csv(events_path, usecols=_cols)
@@ -228,7 +262,7 @@ class FullDataset(torch.utils.data.Dataset):
         self.HEAD_COLS = head_cols
         self.freq = freq
         # clip to 300 datapoints for consistent trajectory sizes for batch sizing
-        self.SAMPLE_SIZE = sample_size
+        self.sample_size = sample_size
         # returns onset times for the first 101 events (for bookending the 100th event)
         self.events_dict = None
         self.traj_df = None
@@ -241,7 +275,6 @@ class FullDataset(torch.utils.data.Dataset):
         self.imgset, self.imgset_labels = [], []
 
         self.build_datasets()
-
 
     def build_datasets(self):
         cifar_data = torchvision.datasets.CIFAR100('./cifar100data/',train=True,download=True) # !!!!!!!!! ^^ train?
@@ -282,7 +315,8 @@ class FullDataset(torch.utils.data.Dataset):
         # reindex 0-n        
         self.events_dict = fullevents_dict
         self.traj_df = fullgaze_df.join(fullhead_df,on=['ParticipantID','timedelta_dt'])
-
+        
+        pd.DataFrame(self.traj_df).to_pickle(utils.output_path+'traj')
 
     def decode_image_from_simset_and_label(self, participant, event_i):
         
@@ -290,6 +324,52 @@ class FullDataset(torch.utils.data.Dataset):
         label = self.events_dict[participant].iloc[event_i]['ImgID']
         loc = np.where(self.imgset_labels==label)[0][simset-1]
         return self.imgset[loc]
+
+    def get_trajectory_mine(self, img):
+
+        layer1st_dims = [utils._nobs, nChannels]
+
+        # Convert the image to an array
+        image_array = np.array(img)
+
+        # Extract the RGB values
+        red_values = image_array[:, :, 0].flatten()
+        green_values = image_array[:, :, 1].flatten()
+        blue_values = image_array[:, :, 2].flatten()
+
+        # Create the correlated matrix using a trigonometric function
+        matrix = np.zeros((layer1st_dims[0], layer1st_dims[1]))
+        for i in range(layer1st_dims[0]):
+            for j in range(layer1st_dims[1]):
+                index = j % 32
+                a = np.sin(i * red_values[index]) 
+                b = np.cos(j * green_values[index])
+                c = np.tan(i * j * blue_values[index])
+                matrix[i, j] = a + b + c
+        self.traj_tens = torch.tensor(matrix).to(_device)
+            
+    def get_trajectory_sasha(self, image):
+        final_arr = []
+        if len(image.shape) == 3:
+            image = np.dot(image[...,:3], [0.2989, 0.5870, 0.1140])
+            image  -= image.mean()
+        spectrum = np.abs(fft2(image))
+        timeseries_x = np.fft.ifft(np.mean(spectrum, axis=0)) 
+        timeseries_y = np.fft.ifft(np.mean(spectrum, axis=1))
+        final_arr.append(np.real(timeseries_x))
+        final_arr.append(np.imag(timeseries_x))
+        final_arr.append(np.real(timeseries_y))
+        final_arr.append(np.imag(timeseries_y))
+        final_arr = np.array(np.transpose(final_arr))
+        self.traj_tens = torch.tensor(final_arr).to(_device)
+        
+    def get_trajectory_orig(self, part, event_i):
+
+        start_event = self.events_dict[part].iloc[event_i]['Offset_dt'] + pd.Timedelta(seconds=0.5)
+        # dataset is prefenceposted
+        end_event = self.events_dict[part].iloc[(event_i + 1)]['Offset_dt']
+        traj = self.traj_df.loc[part][(self.traj_df.loc[part].index >= start_event) & (self.traj_df.loc[part].index < end_event)][:self.sample_size]
+        self.traj_tens = torch.tensor(traj.values).to(_device)
 
 
     def __len__(self):
@@ -309,13 +389,7 @@ class FullDataset(torch.utils.data.Dataset):
         marg_img = self.decode_image_from_simset_and_label(marg_part, marg_eventi)
         self.marg_tens = torch.tensor(marg_img).to(_device)
 
-
-        start_event = self.events_dict[part].iloc[event_i]['Offset_dt'] + pd.Timedelta(seconds=0.5)
-        # dataset is prefenceposted
-        end_event = self.events_dict[part].iloc[(event_i + 1)]['Offset_dt']
-        # multi-index: participant.index => timedelta:
-        traj = self.traj_df.loc[part][(self.traj_df.loc[part].index >= start_event) & (self.traj_df.loc[part].index < end_event)][:self.SAMPLE_SIZE]
-        self.traj_tens = torch.tensor(traj.values).to(_device)
-
+        # self.get_trajectory_orig(part, event_i)
+        self.get_trajectory_mine(joint_img)
         return (self.traj_tens, self.joint_tens, self.marg_tens)
 

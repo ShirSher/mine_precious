@@ -73,7 +73,7 @@ class statistical_estimator(nn.Module):
         self.p_fc = p_fc
         #conv_depth_array = np.linspace(traject_input_dim[0],traject_max_depth, traject_num_layers+1).astype(int)
         first_depth = 32
-        conv_depth_array = [traject_input_dim[0],first_depth]
+        conv_depth_array = [traject_input_dim[0], first_depth]
         for i in range(traject_num_layers):
             if conv_depth_array[-1]*2 > traject_max_depth:
                 conv_depth_array.append(conv_depth_array[-1])

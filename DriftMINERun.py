@@ -38,16 +38,14 @@ torch.backends.cudnn.benchmark = True
 # ================
 gamma = 0
 optimizer = 2 # Adam
-lr = 1e-7
+lr = 1e-4
 # arbitrary
 # on local running out of memory if bs is too large
 batch_size = 512
-epochs = 60 # for testing
+epochs = 200 # for testing
 # train = True
 # hard code. only combined makes sense
 net_num = 1
-nobs = 300
-nChannels = len(FullDriftDataset._gaze_cols) + len(FullDriftDataset._head_cols)
 
 mine = MINE.MINE(train = True,
                  batch = batch_size,
@@ -58,7 +56,7 @@ mine = MINE.MINE(train = True,
                  traject_kernel = 5,
                  traject_padding = 0,
                  traject_pooling = [1,2],
-                 traject_input_dim = [nChannels, nobs])
+                 traject_input_dim = [FullDriftDataset.nChannels, utils._nobs])
 
 device = utils._device
 print(device)
