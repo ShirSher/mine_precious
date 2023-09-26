@@ -17,7 +17,7 @@ from random import shuffle
 _nobs = 32
 
 # CUDA for PyTorch
-_device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
+_device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 _batch_size = 16
 
 # creating needed output folders, if needed.

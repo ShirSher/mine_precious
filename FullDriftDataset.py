@@ -25,9 +25,9 @@ END_MINUTE = 5
 
 _gaze_cols = []
 _head_cols = []
-mode = 'sasha'
+# mode = 'sasha'
 # mode = 'regular'
-# mode = 'toThePlottings'
+mode = 'toThePlottings'
 
 if mode == 'toThePlottings':
     _gaze_cols = ['norm_pos_x',
@@ -80,10 +80,10 @@ def get_selection ():
     # ================
     data_path = _base_path
     participants_set = set([_dir for _dir in os.listdir(data_path) if not _dir.startswith(".")])
-    exclude_set = set(['DL','OL','SM', 'VT', 'NC', 'OA', 'NH', 'TL'])
+    exclude_set = set(['DL', 'NH', 'NC', 'OL', 'OA', 'SM', 'TL', 'VT'])
     participants_list = list(participants_set - exclude_set)
     participants_list = [p for p in participants_list if 'try' not in p.lower()]
-    # participants_list = participants_list[:2] # for testing  - rm for train.
+    participants_list = participants_list[:2] # for testing  - rm for train.
     print('Testing on participants,', participants_list)
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ^^ aks what are those numbers?
@@ -325,7 +325,7 @@ class FullDataset(torch.utils.data.Dataset):
         loc = np.where(self.imgset_labels==label)[0][simset-1]
         return self.imgset[loc]
 
-    def get_trajectory_mine(self, img):
+    def get_trajectory_shira(self, img):
 
         layer1st_dims = [utils._nobs, nChannels]
 
@@ -356,6 +356,7 @@ class FullDataset(torch.utils.data.Dataset):
         spectrum = np.abs(fft2(image))
         timeseries_x = np.fft.ifft(np.mean(spectrum, axis=0)) 
         timeseries_y = np.fft.ifft(np.mean(spectrum, axis=1))
+
         final_arr.append(np.real(timeseries_x))
         final_arr.append(np.imag(timeseries_x))
         final_arr.append(np.real(timeseries_y))
@@ -389,7 +390,11 @@ class FullDataset(torch.utils.data.Dataset):
         marg_img = self.decode_image_from_simset_and_label(marg_part, marg_eventi)
         self.marg_tens = torch.tensor(marg_img).to(_device)
 
-        # self.get_trajectory_orig(part, event_i)
-        self.get_trajectory_mine(joint_img)
+        # Picking a randome image for traj test
+        # traj_test_part, traj_test_eventi = choice(self.ix_list)
+        # traj_test_img = self.decode_image_from_simset_and_label(traj_test_part, traj_test_eventi)
+
+        self.get_trajectory_orig(part, event_i)
+        # self.get_trajectory_sasha(joint_img)
         return (self.traj_tens, self.joint_tens, self.marg_tens)
 

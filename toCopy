@@ -1,7 +1,0 @@
-cp /y/precious/Helpers/* .
-cp /y/precious/networks.py . 
-cp /y/precious/MINE.py .
-cp /y/precious/FullDriftDataset.py .
-cp /y/precious/utils.py .
-cp /y/precious/DriftMINERun.py .
-

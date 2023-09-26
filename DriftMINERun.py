@@ -42,7 +42,7 @@ lr = 1e-4
 # arbitrary
 # on local running out of memory if bs is too large
 batch_size = 512
-epochs = 200 # for testing
+epochs = 2 # for testing
 # train = True
 # hard code. only combined makes sense
 net_num = 1
