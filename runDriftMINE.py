@@ -9,11 +9,9 @@ import numpy as np
 import MINE
 from random import shuffle, choice
 
-import fullDriftDataset
+import driftDataset
 import utils
 from datetime import datetime
-
-
 
 _datestr = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
 
@@ -57,7 +55,7 @@ mine = MINE.MINE(train = True,
                  traject_kernel = 5,
                  traject_padding = 0,
                  traject_pooling = [1,2],
-                 traject_input_dim = [fullDriftDataset.nChannels, utils._nobs])
+                 traject_input_dim = [driftDataset.nChannels, utils._nobs])
 
 device = utils._device
 print(device)
@@ -69,17 +67,17 @@ print(mine.net)
 # ================
 # Data Loader
 # ================
-train_selection, val_selection = fullDriftDataset.get_selection()
+train_selection, val_selection = driftDataset.get_selection()
 params = {
             'batch_size': batch_size,
             'shuffle': False
         }
 
-train_dataset = fullDriftDataset.FullDataset(ix_dict=train_selection)
+train_dataset = driftDataset.DriftDataset(ix_dict=train_selection)
 print('len train dataset',len(train_dataset))
 train_generator = torch.utils.data.DataLoader(train_dataset, **params)
 
-val_dataset = fullDriftDataset.FullDataset(ix_dict=val_selection)
+val_dataset = driftDataset.DriftDataset(ix_dict=val_selection)
 print('len val dataset',len(val_dataset))
 val_generator = torch.utils.data.DataLoader(val_dataset, **params)
 
